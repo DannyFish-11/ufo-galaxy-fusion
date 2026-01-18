@@ -1,0 +1,156 @@
+# UFO Galaxy - Universal Tool Discovery Protocol (UTDP)
+# Version: 1.0
+# 跨平台统一工具发现与调用协议
+
+version: "1.0"
+protocol_name: "UTDP"
+
+# 工具定义规范
+tool_schema:
+  name: "string"              # 工具名称
+  platform: "enum"            # windows | android | linux | macos
+  type: "enum"                # executable | app | command | service
+  path: "string"              # 工具路径或包名
+  capabilities: "list"        # 工具能力列表
+  invoke_patterns: "object"   # 调用模式
+
+# 示例：Windows 工具
+windows_tools:
+  opencode:
+    name: "OpenCode"
+    platform: "windows"
+    type: "executable"
+    path: "C:\\Program Files\\OpenCode\\opencode.exe"
+    capabilities:
+      - code_editing
+      - debugging
+      - git_integration
+      - terminal_access
+    invoke_patterns:
+      cli: "opencode {args}"
+      open_file: "opencode {file_path}"
+      run_command: "opencode --run {script}"
+      ui_automation: true
+    metadata:
+      version: "auto_detect"
+      vendor: "OpenCode Team"
+
+  antigravity:
+    name: "Antigravity"
+    platform: "windows"
+    type: "executable"
+    path: "C:\\antigravity\\ag.exe"
+    capabilities:
+      - ai_code_generation
+      - code_refactoring
+      - code_analysis
+    invoke_patterns:
+      cli: "ag {command} {args}"
+      generate: "ag generate --prompt '{prompt}'"
+      refactor: "ag refactor {file_path}"
+      ui_automation: true
+
+  vscode:
+    name: "Visual Studio Code"
+    platform: "windows"
+    type: "executable"
+    path: "C:\\Program Files\\Microsoft VS Code\\Code.exe"
+    capabilities:
+      - code_editing
+      - debugging
+      - extensions
+    invoke_patterns:
+      cli: "code {args}"
+      open_folder: "code {folder_path}"
+      install_extension: "code --install-extension {extension_id}"
+
+# 示例：Android 工具
+android_tools:
+  termux:
+    name: "Termux"
+    platform: "android"
+    type: "app"
+    path: "com.termux"
+    capabilities:
+      - shell_commands
+      - python_execution
+      - package_management
+    invoke_patterns:
+      intent: "am start -n com.termux/.app.TermuxActivity"
+      shell: "termux-exec {command}"
+      api: "termux-api {command}"
+
+  tasker:
+    name: "Tasker"
+    platform: "android"
+    type: "app"
+    path: "net.dinglisch.android.taskerm"
+    capabilities:
+      - automation
+      - task_scheduling
+      - event_triggers
+    invoke_patterns:
+      intent: "am start -n net.dinglisch.android.taskerm/.Tasker"
+      trigger_task: "am broadcast -a net.dinglisch.android.taskerm.ACTION_TASK --es task_name '{task}'"
+
+  automate:
+    name: "Automate"
+    platform: "android"
+    type: "app"
+    path: "com.llamalab.automate"
+    capabilities:
+      - flow_automation
+      - ui_automation
+      - sensor_access
+    invoke_patterns:
+      intent: "am start -n com.llamalab.automate/.FlowActivity"
+      run_flow: "am broadcast -a com.llamalab.automate.intent.action.START_FLOW --es flow_name '{flow}'"
+
+# AI 能力推断规则
+capability_inference_rules:
+  by_name:
+    - pattern: ".*code.*|.*edit.*"
+      capabilities: ["code_editing"]
+    - pattern: ".*debug.*"
+      capabilities: ["debugging"]
+    - pattern: ".*git.*"
+      capabilities: ["version_control"]
+    - pattern: ".*term.*|.*shell.*"
+      capabilities: ["shell_commands"]
+    - pattern: ".*auto.*"
+      capabilities: ["automation"]
+  
+  by_file_extension:
+    - extension: ".exe"
+      platform: "windows"
+      type: "executable"
+    - extension: ".app"
+      platform: "macos"
+      type: "app"
+    - extension: ".apk"
+      platform: "android"
+      type: "app"
+
+# 调用优先级规则
+invocation_priority:
+  - cli              # 优先使用命令行
+  - ui_automation    # 其次使用 UI 自动化
+  - intent           # Android 使用 Intent
+  - api              # 最后使用 API
+
+# 安全规则
+security_rules:
+  require_confirmation:
+    - system_modification
+    - file_deletion
+    - network_access
+  
+  sandbox_mode:
+    enabled: true
+    allowed_paths:
+      - "C:\\Users\\{user}\\Documents"
+      - "/sdcard/Documents"
+  
+  rate_limiting:
+    max_calls_per_minute: 60
+    max_concurrent_calls: 10
