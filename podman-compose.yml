@@ -1,6 +1,6 @@
 ###############################################################################
-# UFO Galaxy 64-Core MCP Matrix - Podman Compose Configuration
-# Optimized for 24-Core MCP Service List
+# UFO Galaxy 70-Core MCP Matrix - Final "One-Click" Configuration
+# Fully Aligned Ports & Layered Onion Network
 ###############################################################################
 
 version: "3.8"
@@ -29,126 +29,19 @@ volumes:
   sqlite_data:
 
 services:
-  # ========== 架构核心 (3000+) ==========
-  
-  # 1. OneAPI 网关 (Node 01)
-  mcp-oneapi:
-    image: ghcr.io/songquanpeng/one-api:latest
-    container_name: mcp-oneapi
+  # ========== INFRASTRUCTURE ==========
+  redis:
+    image: docker.io/redis:7-alpine
+    container_name: ufo_redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - net_kernel
     restart: unless-stopped
-    ports:
-      - "3000:3000"
-    volumes:
-      - oneapi_data:/data
-    networks:
-      - mcp-network
-      - net_kernel
 
-  # 2. 任务调度器 (Node 02)
-  mcp-tasker:
-    build: ./nodes/Node_02_Tasker
-    container_name: mcp-tasker
-    ports:
-      - "3002:3002"
-    networks:
-      - mcp-network
-      - net_kernel
-
-  # 3. 搜索服务 (Node 09)
-  mcp-search:
-    build: ./nodes/Node_09_Search
-    container_name: mcp-search
-    ports:
-      - "3003:3003"
-    networks:
-      - mcp-network
-      - net_tools
-
-  # 4. YouTube 工具 (Node 14)
-  mcp-youtube:
-    build: ./nodes/Node_14_FFmpeg
-    container_name: mcp-youtube
-    ports:
-      - "3004:3004"
-    networks:
-      - mcp-network
-      - net_tools
-
-  # 5. 分类器 (Node 58)
-  mcp-classifier:
-    build: ./nodes/Node_58_ModelRouter
-    container_name: mcp-classifier
-    ports:
-      - "3005:3005"
-    networks:
-      - mcp-network
-      - net_gateway
-
-  # 6. 系统监控 (Node 64)
-  mcp-monitoring:
-    build: ./nodes/Node_64_Telemetry
-    container_name: mcp-monitoring
-    ports:
-      - "19999:19999"
-    networks:
-      - mcp-network
-      - net_kernel
-
-  # 7. Qdrant 向量数据库 (Node 20)
-  mcp-qdrant:
-    image: qdrant/qdrant:latest
-    container_name: mcp-qdrant
-    ports:
-      - "6333:6333"
-    volumes:
-      - qdrant_data:/qdrant/storage
-    networks:
-      - mcp-network
-      - net_tools
-
-  # 8. OCR 服务 (Node 15)
-  mcp-ocr:
-    build: ./nodes/Node_15_OCR
-    container_name: mcp-ocr
-    ports:
-      - "5001:5001"
-    networks:
-      - mcp-network
-      - net_tools
-
-  # 9. UI 分析器 (Node 45)
-  mcp-ui-analyzer:
-    build: ./nodes/Node_45_DesktopAutomation
-    container_name: mcp-ui-analyzer
-    ports:
-      - "4723:4723"
-    networks:
-      - mcp-network
-      - net_phys
-
-  # ========== 功能工具箱 (8001-8015) ==========
-
-  # 1. Filesystem 工具 (Node 06)
-  mcp-filesystem:
-    build: ./nodes/Node_06_Filesystem
-    container_name: mcp-filesystem
-    ports:
-      - "8001:8001"
-    networks:
-      - mcp-network
-      - net_tools
-
-  # 2. GitHub Tools (Node 11)
-  mcp-github-tools:
-    build: ./nodes/Node_11_GitHub
-    container_name: mcp-github-tools
-    ports:
-      - "8002:8002"
-    networks:
-      - mcp-network
-      - net_tools
-
-  # 3. Memory 服务 (Node 00)
+  # ========== LAYER 0: KERNEL (3000+, 8000+, 8060+) ==========
+  
+  # Node 00: State Machine
   mcp-memory:
     build: ./nodes/Node_00_StateMachine
     container_name: mcp-memory
@@ -158,59 +51,76 @@ services:
       - mcp-network
       - net_kernel
 
-  # 4. Notion 集成 (Node 21)
-  mcp-notion:
-    build: ./nodes/Node_21_Notion
-    container_name: mcp-notion
+  # Node 01: OneAPI Gateway
+  mcp-oneapi:
+    image: ghcr.io/songquanpeng/one-api:latest
+    container_name: mcp-oneapi
+    ports:
+      - "3000:3000"
+    volumes:
+      - oneapi_data:/data
+    networks:
+      - mcp-network
+      - net_kernel
+
+  # Node 02: Tasker Engine
+  mcp-tasker:
+    build: ./nodes/Node_02_Tasker
+    container_name: mcp-tasker
+    ports:
+      - "3002:3002"
+    networks:
+      - mcp-network
+      - net_kernel
+
+  # Node 03: Secret Vault
+  node_03_secretvault:
+    build: ./nodes/Node_03_SecretVault
+    container_name: ufo_node_03
+    ports:
+      - "8003:8003"
+    networks:
+      - net_kernel
+
+  # Node 04: Global Router
+  node_04_router:
+    build: ./nodes/Node_04_Router
+    container_name: ufo_node_04
     ports:
       - "8004:8004"
     networks:
-      - mcp-network
-      - net_tools
+      - net_kernel
+      - net_gateway
 
-  # 5. Playwright 工具 (Node 45)
-  mcp-playwright:
-    image: mcr.microsoft.com/playwright:v1.40.0-jammy
-    container_name: mcp-playwright
+  # Node 05: Auth Guardian
+  node_05_auth:
+    build: ./nodes/Node_05_Auth
+    container_name: ufo_node_05
     ports:
       - "8005:8005"
     networks:
-      - mcp-network
-      - net_phys
+      - net_kernel
 
-  # 6. Slack 集成 (Node 10)
-  mcp-slack:
-    build: ./nodes/Node_10_Slack
-    container_name: mcp-slack
+  # Node 64: Telemetry (Monitoring)
+  mcp-monitoring:
+    build: ./nodes/Node_64_Telemetry
+    container_name: mcp-monitoring
     ports:
-      - "8006:8006"
+      - "19999:19999"
     networks:
       - mcp-network
-      - net_tools
+      - net_kernel
 
-  # 7. SQLite DB (Node 13)
-  mcp-sqlite:
-    build: ./nodes/Node_13_SQLite
-    container_name: mcp-sqlite
+  # Node 65: Logger
+  node_65_logger:
+    build: ./nodes/Node_65_LoggerCentral
+    container_name: ufo_node_65
     ports:
-      - "8007:8007"
-    volumes:
-      - sqlite_data:/app/data
+      - "8065:8065"
     networks:
-      - mcp-network
-      - net_tools
+      - net_kernel
 
-  # 8. Brave Search (Node 22)
-  mcp-brave:
-    build: ./nodes/Node_22_BraveSearch
-    container_name: mcp-brave
-    ports:
-      - "8008:8008"
-    networks:
-      - mcp-network
-      - net_tools
-
-  # 9. Docker Manager (Node 66)
+  # Node 66: Docker Manager
   mcp-docker:
     build: ./nodes/Node_66_ConfigManager
     container_name: mcp-docker
@@ -222,17 +132,46 @@ services:
       - mcp-network
       - net_kernel
 
-  # 10. GitHub Official (Node 11)
-  mcp-github-official:
-    build: ./nodes/Node_11_GitHub
-    container_name: mcp-github-official
+  # Node 67: Health Monitor
+  node_67_health:
+    build: ./nodes/Node_67_HealthMonitor
+    container_name: ufo_node_67
     ports:
-      - "8010:8010"
+      - "8067:8067"
     networks:
-      - mcp-network
-      - net_tools
+      - net_kernel
 
-  # 11. Sequential Thinking (Node 56)
+  # Node 68: Security
+  node_68_security:
+    build: ./nodes/Node_68_Security
+    container_name: ufo_node_68
+    ports:
+      - "8068:8068"
+    networks:
+      - net_kernel
+
+  # Node 69: Backup
+  node_69_backup:
+    build: ./nodes/Node_69_BackupRestore
+    container_name: ufo_node_69
+    ports:
+      - "8069:8069"
+    networks:
+      - net_kernel
+
+  # ========== LAYER 1: GATEWAY (3005, 8011, 8050+) ==========
+
+  # Node 50: Transformer
+  node_50_transformer:
+    build: ./nodes/Node_50_Transformer
+    container_name: ufo_node_50
+    ports:
+      - "8050:8050"
+    networks:
+      - net_gateway
+      - net_phys
+
+  # Node 56: Sequential Thinking
   mcp-thinking:
     build: ./nodes/Node_56_AgentSwarm
     container_name: mcp-thinking
@@ -242,52 +181,149 @@ services:
       - mcp-network
       - net_gateway
 
-  # 12. FFmpeg Tools (Node 14)
-  mcp-ffmpeg:
-    image: jrottenberg/ffmpeg:latest
-    container_name: mcp-ffmpeg
+  # Node 58: Classifier (Model Router)
+  mcp-classifier:
+    build: ./nodes/Node_58_ModelRouter
+    container_name: mcp-classifier
     ports:
-      - "8012:8012"
+      - "3005:3005"
     networks:
       - mcp-network
-      - net_tools
+      - net_gateway
 
-  # 13. Arxiv Research (Node 13)
+  # Node 51-55, 57, 59-63 (Quantum & Reasoning)
+  node_51_quantum:
+    build: ./nodes/Node_51_QuantumDispatcher
+    ports: ["8051:8051"]
+    networks: [net_gateway]
+  node_52_qiskit:
+    build: ./nodes/Node_52_QiskitSimulator
+    ports: ["8052:8052"]
+    networks: [net_gateway]
+  node_54_math:
+    build: ./nodes/Node_54_SymbolicMath
+    ports: ["8054:8054"]
+    networks: [net_gateway]
+
+  # ========== LAYER 2: TOOLS (3003, 3004, 5001, 6333, 8001-8015) ==========
+
+  # Node 06: Filesystem
+  mcp-filesystem:
+    build: ./nodes/Node_06_Filesystem
+    ports: ["8001:8001"]
+    networks: [mcp-network, net_tools]
+
+  # Node 07: Git
+  node_07_git:
+    build: ./nodes/Node_07_Git
+    ports: ["8007:8007"]
+    networks: [net_tools]
+
+  # Node 09: Search Service
+  mcp-search:
+    build: ./nodes/Node_09_Search
+    ports: ["3003:3003"]
+    networks: [mcp-network, net_tools]
+
+  # Node 10: Slack
+  mcp-slack:
+    build: ./nodes/Node_10_Slack
+    ports: ["8006:8006"]
+    networks: [mcp-network, net_tools]
+
+  # Node 11: GitHub (Official & Tools)
+  mcp-github-tools:
+    build: ./nodes/Node_11_GitHub
+    ports: ["8002:8002"]
+    networks: [mcp-network, net_tools]
+  mcp-github-official:
+    build: ./nodes/Node_11_GitHub
+    ports: ["8010:8010"]
+    networks: [mcp-network, net_tools]
+
+  # Node 13: Arxiv & SQLite
+  mcp-sqlite:
+    build: ./nodes/Node_13_SQLite
+    ports: ["8007:8007"]
+    networks: [mcp-network, net_tools]
   mcp-arxiv:
     build: ./nodes/Node_13_SQLite
-    container_name: mcp-arxiv
-    ports:
-      - "8013:8013"
-    networks:
-      - mcp-network
-      - net_tools
+    ports: ["8013:8013"]
+    networks: [mcp-network, net_tools]
 
-  # 14. Terminal 服务 (Node 48)
-  mcp-terminal:
-    build: ./nodes/Node_48_Serial
-    container_name: mcp-terminal
-    ports:
-      - "8014:8014"
-    networks:
-      - mcp-network
-      - net_phys
+  # Node 14: YouTube & FFmpeg
+  mcp-youtube:
+    build: ./nodes/Node_14_FFmpeg
+    ports: ["3004:3004"]
+    networks: [mcp-network, net_tools]
+  mcp-ffmpeg:
+    image: jrottenberg/ffmpeg:latest
+    ports: ["8012:8012"]
+    networks: [mcp-network, net_tools]
 
-  # 15. Weather Service (Node 24)
+  # Node 15: OCR
+  mcp-ocr:
+    build: ./nodes/Node_15_OCR
+    ports: ["5001:5001"]
+    networks: [mcp-network, net_tools]
+
+  # Node 20: Qdrant
+  mcp-qdrant:
+    image: qdrant/qdrant:latest
+    ports: ["6333:6333"]
+    volumes: ["qdrant_data:/qdrant/storage"]
+    networks: [mcp-network, net_tools]
+
+  # Node 21: Notion
+  mcp-notion:
+    build: ./nodes/Node_21_Notion
+    ports: ["8004:8004"]
+    networks: [mcp-network, net_tools]
+
+  # Node 22: Brave Search
+  mcp-brave:
+    build: ./nodes/Node_22_BraveSearch
+    ports: ["8008:8008"]
+    networks: [mcp-network, net_tools]
+
+  # Node 24: Weather
   mcp-weather:
     build: ./nodes/Node_24_Weather
-    container_name: mcp-weather
-    ports:
-      - "8015:8015"
-    networks:
-      - mcp-network
-      - net_tools
+    ports: ["8015:8015"]
+    networks: [mcp-network, net_tools]
 
-  # ========== 基础服务 ==========
-  redis:
-    image: docker.io/redis:7-alpine
-    container_name: ufo_redis
-    volumes:
-      - redis_data:/data
-    networks:
-      - net_kernel
-    restart: unless-stopped
+  # Node 26-32: Reserved
+  node_26_reserved:
+    build: ./nodes/Node_26_Reserved
+    ports: ["8026:8026"]
+    networks: [net_tools]
+
+  # ========== LAYER 3: PHYSICAL (4723, 8014, 8033+) ==========
+
+  # Node 33: ADB
+  node_33_adb:
+    build: ./nodes/Node_33_ADB
+    ports: ["8033:8033"]
+    networks: [net_phys]
+
+  # Node 45: UI Analyzer & Playwright
+  mcp-ui-analyzer:
+    build: ./nodes/Node_45_DesktopAutomation
+    ports: ["4723:4723"]
+    networks: [mcp-network, net_phys]
+  mcp-playwright:
+    image: mcr.microsoft.com/playwright:v1.40.0-jammy
+    ports: ["8005:8005"]
+    networks: [mcp-network, net_phys]
+
+  # Node 48: Terminal
+  mcp-terminal:
+    build: ./nodes/Node_48_Serial
+    ports: ["8014:8014"]
+    networks: [mcp-network, net_phys]
+
+  # Node 49: OctoPrint
+  node_49_octoprint:
+    build: ./nodes/Node_49_OctoPrint
+    ports: ["8049:8049"]
+    networks: [net_phys]
