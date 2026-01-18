@@ -1,0 +1,1216 @@
+###############################################################################
+# UFO Galaxy 64-Core MCP Matrix - Podman Compose Configuration
+# Complete 64-Node Architecture - Onion Layered Topology
+# 
+# Networks:
+#   - net_kernel (Layer 0): Core infrastructure, full access
+#   - net_gateway (Layer 1): Brain layer, bridges kernel and tools
+#   - net_tools (Layer 2): Software tools, no direct hardware access
+#   - net_phys (Layer 3): Physical devices, ISOLATED from internet
+###############################################################################
+
+version: "3.8"
+
+networks:
+  # Layer 0: Kernel Network - The Truth
+  net_kernel:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.88.0.0/24
+          gateway: 10.88.0.1
+    driver_opts:
+      com.docker.network.bridge.name: ufo_kernel
+
+  # Layer 1: Gateway Network - The Brain
+  net_gateway:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.88.1.0/24
+          gateway: 10.88.1.1
+    driver_opts:
+      com.docker.network.bridge.name: ufo_gateway
+
+  # Layer 2: Tools Network - Software
+  net_tools:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.88.2.0/24
+          gateway: 10.88.2.1
+    driver_opts:
+      com.docker.network.bridge.name: ufo_tools
+
+  # Layer 3: Physical Network - ISOLATED (No Internet)
+  net_phys:
+    driver: bridge
+    internal: true  # CRITICAL: No external access
+    ipam:
+      config:
+        - subnet: 10.88.3.0/24
+          gateway: 10.88.3.1
+    driver_opts:
+      com.docker.network.bridge.name: ufo_phys
+
+services:
+  #############################################################################
+  # INFRASTRUCTURE
+  #############################################################################
+  
+  redis:
+    image: docker.io/redis:7-alpine
+    container_name: ufo_redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      net_kernel:
+        ipv4_address: 10.88.0.2
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  #############################################################################
+  # LAYER 0: KERNEL (The Truth) - Nodes 00-05, 64-69
+  #############################################################################
+  
+  # Node 00: Global State Machine (The Heart)
+  node_00_statemachine:
+    build: ./nodes/Node_00_StateMachine
+    container_name: ufo_node_00
+    environment:
+      - NODE_ID=00
+      - NODE_NAME=StateMachine
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      net_kernel:
+        ipv4_address: 10.88.0.10
+      net_gateway:
+        ipv4_address: 10.88.1.10
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # Node 01: One-API Gateway
+  node_01_oneapi:
+    build: ./nodes/Node_01_OneAPI
+    container_name: ufo_node_01
+    environment:
+      - NODE_ID=01
+      - NODE_NAME=OneAPI
+      - ONEAPI_URL=${ONEAPI_URL:-}
+      - ONEAPI_API_KEY=${ONEAPI_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OLLAMA_URL=${OLLAMA_URL:-http://host.containers.internal:11434}
+    env_file:
+      - ./config/.env
+    networks:
+      net_kernel:
+        ipv4_address: 10.88.0.11
+      net_gateway:
+        ipv4_address: 10.88.1.11
+    ports:
+      - "8001:8001"
+    restart: unless-stopped
+
+  # Node 02: Tasker Engine
+  node_02_tasker:
+    build: ./nodes/Node_02_Tasker
+    container_name: ufo_node_02
+    environment:
+      - NODE_ID=02
+      - NODE_NAME=Tasker
+      - STATE_MACHINE_URL=http://node_00_statemachine:8000
+    depends_on:
+      node_00_statemachine:
+        condition: service_healthy
+    networks:
+      net_kernel:
+        ipv4_address: 10.88.0.12
+      net_gateway:
+        ipv4_address: 10.88.1.12
+    ports:
+      - "8002:8002"
+    restart: unless-stopped
+
+  # Node 03: Secret Vault
+  node_03_secretvault:
+    build: ./nodes/Node_03_SecretVault
+    container_name: ufo_node_03
+    environment:
+      - NODE_ID=03
+      - NODE_NAME=SecretVault
+      - STATE_MACHINE_URL=http://node_00_statemachine:8000
+    env_file:
+      - ./config/.env
+    depends_on:
+      node_00_statemachine:
+        condition: service_healthy
+    networks:
+      net_kernel:
+        ipv4_address: 10.88.0.13
+    volumes:
+      - secrets_data:/secrets:ro
+    ports:
+      - "8003:8003"
+    restart: unless-stopped
+
+  # Node 04: Global Router
+  node_04_router:
+    build: ./nodes/Node_04_Router
+    container_name: ufo_node_04
+    environment:
+      - NODE_ID=04
+      - NODE_NAME=Router
+      - GALAXY_NET_BASE=10.88
+    networks:
+      net_kernel:
+        ipv4_address: 10.88.0.14
+      net_gateway:
+        ipv4_address: 10.88.1.14
+      net_tools:
+        ipv4_address: 10.88.2.14
+    ports:
+      - "8004:8004"
+    restart: unless-stopped
+
+  # Node 05: Auth Guardian
+  node_05_auth:
+    build: ./nodes/Node_05_Auth
+    container_name: ufo_node_05
+    environment:
+      - NODE_ID=05
+      - NODE_NAME=Auth
+      - JWT_SECRET=${JWT_SECRET:-}
+      - DEFAULT_API_KEY=${DEFAULT_API_KEY:-ufo-galaxy-default-key}
+    env_file:
+      - ./config/.env
+    networks:
+      net_kernel:
+        ipv4_address: 10.88.0.15
+    ports:
+      - "8005:8005"
+    restart: unless-stopped
+
+  # Node 64: Predictive Telemetry
+  node_64_telemetry:
+    build: ./nodes/Node_64_Telemetry
+    container_name: ufo_node_64
+    environment:
+      - NODE_ID=64
+      - NODE_NAME=Telemetry
+      - STATE_MACHINE_URL=http://node_00_statemachine:8000
+    depends_on:
+      node_00_statemachine:
+        condition: service_healthy
+    networks:
+      net_kernel:
+        ipv4_address: 10.88.0.64
+    ports:
+      - "8064:8064"
+    volumes:
+      - telemetry_data:/app/data
+    restart: unless-stopped
+
+  # Node 65: Centralized Audit Logger
+  node_65_logger:
+    build: ./nodes/Node_65_LoggerCentral
+    container_name: ufo_node_65
+    environment:
+      - NODE_ID=65
+      - NODE_NAME=LoggerCentral
+      - STATE_MACHINE_URL=http://node_00_statemachine:8000
+    depends_on:
+      node_00_statemachine:
+        condition: service_healthy
+    networks:
+      net_kernel:
+        ipv4_address: 10.88.0.65
+    ports:
+      - "8065:8065"
+    volumes:
+      - logs_data:/app/data
+    restart: unless-stopped
+
+  # Node 67: Intelligent Health Monitor
+  node_67_healthmonitor:
+    build: ./nodes/Node_67_HealthMonitor
+    container_name: ufo_node_67
+    environment:
+      - NODE_ID=67
+      - NODE_NAME=HealthMonitor
+      - STATE_MACHINE_URL=http://node_00_statemachine:8000
+      - TELEMETRY_URL=http://node_64_telemetry:8064
+    depends_on:
+      - node_64_telemetry
+    networks:
+      net_kernel:
+        ipv4_address: 10.88.0.67
+    ports:
+      - "8067:8067"
+    restart: unless-stopped
+
+  # Node 68: Security Enforcer
+  node_68_security:
+    build: ./nodes/Node_68_Security
+    container_name: ufo_node_68
+    environment:
+      - NODE_ID=68
+      - NODE_NAME=SecurityEnforcer
+      - STATE_MACHINE_URL=http://node_00_statemachine:8000
+    depends_on:
+      node_00_statemachine:
+        condition: service_healthy
+    networks:
+      net_kernel:
+        ipv4_address: 10.88.0.68
+      net_gateway:
+        ipv4_address: 10.88.1.68
+    ports:
+      - "8068:8068"
+    restart: unless-stopped
+
+  # Node 69: Backup & Disaster Recovery
+  node_69_backup:
+    build: ./nodes/Node_69_BackupRestore
+    container_name: ufo_node_69
+    environment:
+      - NODE_ID=69
+      - NODE_NAME=BackupRestore
+      - STATE_MACHINE_URL=http://node_00_statemachine:8000
+    depends_on:
+      node_00_statemachine:
+        condition: service_healthy
+    networks:
+      net_kernel:
+        ipv4_address: 10.88.0.69
+    ports:
+      - "8069:8069"
+    volumes:
+      - backup_data:/app/backups
+    restart: unless-stopped
+
+  #############################################################################
+  # LAYER 1: GATEWAY (The Brain) - Nodes 50-63
+  #############################################################################
+
+  # Node 50: Protocol Transformer (Hardware Gateway)
+  node_50_transformer:
+    build: ./nodes/Node_50_Transformer
+    container_name: ufo_node_50
+    environment:
+      - NODE_ID=50
+      - NODE_NAME=ProtocolTransformer
+      - STATE_MACHINE_URL=http://node_00_statemachine:8000
+    depends_on:
+      node_00_statemachine:
+        condition: service_healthy
+    networks:
+      net_gateway:
+        ipv4_address: 10.88.1.50
+      net_phys:
+        ipv4_address: 10.88.3.50
+    ports:
+      - "8050:8050"
+    restart: unless-stopped
+
+  # Node 51: Quantum Task Dispatcher
+  node_51_quantumdispatcher:
+    build: ./nodes/Node_51_QuantumDispatcher
+    container_name: ufo_node_51
+    environment:
+      - NODE_ID=51
+      - NODE_NAME=QuantumDispatcher
+    networks:
+      net_gateway:
+        ipv4_address: 10.88.1.51
+    ports:
+      - "8051:8051"
+    restart: unless-stopped
+
+  # Node 52: Qiskit Quantum Simulator
+  node_52_qiskit:
+    build: ./nodes/Node_52_QiskitSimulator
+    container_name: ufo_node_52
+    environment:
+      - NODE_ID=52
+      - NODE_NAME=QiskitSimulator
+    networks:
+      net_gateway:
+        ipv4_address: 10.88.1.52
+    ports:
+      - "8052:8052"
+    restart: unless-stopped
+
+  # Node 53: Graph Logic
+  node_53_graphlogic:
+    build: ./nodes/Node_53_GraphLogic
+    container_name: ufo_node_53
+    environment:
+      - NODE_ID=53
+      - NODE_NAME=GraphLogic
+    networks:
+      net_gateway:
+        ipv4_address: 10.88.1.53
+    ports:
+      - "8053:8053"
+    restart: unless-stopped
+
+  # Node 54: Symbolic Math Verifier
+  node_54_symbolicmath:
+    build: ./nodes/Node_54_SymbolicMath
+    container_name: ufo_node_54
+    environment:
+      - NODE_ID=54
+      - NODE_NAME=SymbolicMath
+    networks:
+      net_gateway:
+        ipv4_address: 10.88.1.54
+    ports:
+      - "8054:8054"
+    restart: unless-stopped
+
+  # Node 55: Monte Carlo Simulation
+  node_55_simulation:
+    build: ./nodes/Node_55_Simulation
+    container_name: ufo_node_55
+    environment:
+      - NODE_ID=55
+      - NODE_NAME=Simulation
+    networks:
+      net_gateway:
+        ipv4_address: 10.88.1.55
+    ports:
+      - "8055:8055"
+    restart: unless-stopped
+
+  # Node 56: Multi-Agent Debate System
+  node_56_agentswarm:
+    build: ./nodes/Node_56_AgentSwarm
+    container_name: ufo_node_56
+    environment:
+      - NODE_ID=56
+      - NODE_NAME=AgentSwarm
+    networks:
+      net_gateway:
+        ipv4_address: 10.88.1.56
+    ports:
+      - "8056:8056"
+    restart: unless-stopped
+
+  # Node 57: Quantum Cloud
+  node_57_quantumcloud:
+    build: ./nodes/Node_57_QuantumCloud
+    container_name: ufo_node_57
+    environment:
+      - NODE_ID=57
+      - NODE_NAME=QuantumCloud
+      - IBM_QUANTUM_TOKEN=${IBM_QUANTUM_TOKEN:-}
+    env_file:
+      - ./config/.env
+    networks:
+      net_gateway:
+        ipv4_address: 10.88.1.57
+    ports:
+      - "8057:8057"
+    restart: unless-stopped
+
+  # Node 58: Model Router (Cost/Logic)
+  node_58_modelrouter:
+    build: ./nodes/Node_58_ModelRouter
+    container_name: ufo_node_58
+    environment:
+      - NODE_ID=58
+      - NODE_NAME=ModelRouter
+      - OLLAMA_URL=${OLLAMA_URL:-http://host.containers.internal:11434}
+    env_file:
+      - ./config/.env
+    networks:
+      net_gateway:
+        ipv4_address: 10.88.1.58
+      net_tools:
+        ipv4_address: 10.88.2.58
+    ports:
+      - "8058:8058"
+    volumes:
+      - model_router_data:/app/data
+    restart: unless-stopped
+
+  # Node 59: Causal Inference
+  node_59_causalinference:
+    build: ./nodes/Node_59_CausalInference
+    container_name: ufo_node_59
+    environment:
+      - NODE_ID=59
+      - NODE_NAME=CausalInference
+    networks:
+      net_gateway:
+        ipv4_address: 10.88.1.59
+    ports:
+      - "8059:8059"
+    restart: unless-stopped
+
+  # Node 60: Temporal Logic
+  node_60_temporallogic:
+    build: ./nodes/Node_60_TemporalLogic
+    container_name: ufo_node_60
+    environment:
+      - NODE_ID=60
+      - NODE_NAME=TemporalLogic
+    networks:
+      net_gateway:
+        ipv4_address: 10.88.1.60
+    ports:
+      - "8060:8060"
+    restart: unless-stopped
+
+  # Node 61: Geometric Reasoning
+  node_61_geometricreasoning:
+    build: ./nodes/Node_61_GeometricReasoning
+    container_name: ufo_node_61
+    environment:
+      - NODE_ID=61
+      - NODE_NAME=GeometricReasoning
+    networks:
+      net_gateway:
+        ipv4_address: 10.88.1.61
+    ports:
+      - "8061:8061"
+    restart: unless-stopped
+
+  # Node 62: Probabilistic Programming
+  node_62_probabilisticprogramming:
+    build: ./nodes/Node_62_ProbabilisticProgramming
+    container_name: ufo_node_62
+    environment:
+      - NODE_ID=62
+      - NODE_NAME=ProbabilisticProgramming
+    networks:
+      net_gateway:
+        ipv4_address: 10.88.1.62
+    ports:
+      - "8062:8062"
+    restart: unless-stopped
+
+  # Node 63: Game Theory
+  node_63_gametheory:
+    build: ./nodes/Node_63_GameTheory
+    container_name: ufo_node_63
+    environment:
+      - NODE_ID=63
+      - NODE_NAME=GameTheory
+    networks:
+      net_gateway:
+        ipv4_address: 10.88.1.63
+    ports:
+      - "8063:8063"
+    restart: unless-stopped
+
+  #############################################################################
+  # LAYER 2: TOOLS (Software) - Nodes 06-25
+  #############################################################################
+
+  # Node 06: Filesystem Tool
+  node_06_filesystem:
+    build: ./nodes/Node_06_Filesystem
+    container_name: ufo_node_06
+    environment:
+      - NODE_ID=06
+      - NODE_NAME=Filesystem
+    volumes:
+      - workspace_data:/workspace
+    networks:
+      net_tools:
+        ipv4_address: 10.88.2.6
+    ports:
+      - "8006:8006"
+    restart: unless-stopped
+
+  # Node 07: Git Tool
+  node_07_git:
+    build: ./nodes/Node_07_Git
+    container_name: ufo_node_07
+    environment:
+      - NODE_ID=07
+      - NODE_NAME=GitTool
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+    volumes:
+      - workspace_data:/workspace
+    networks:
+      net_tools:
+        ipv4_address: 10.88.2.7
+    ports:
+      - "8007:8007"
+    restart: unless-stopped
+
+  # Node 08: Fetch/HTTP
+  node_08_fetch:
+    build: ./nodes/Node_08_Fetch
+    container_name: ufo_node_08
+    environment:
+      - NODE_ID=08
+      - NODE_NAME=Fetch
+    networks:
+      net_tools:
+        ipv4_address: 10.88.2.8
+    ports:
+      - "8008:8008"
+    restart: unless-stopped
+
+  # Node 09: Search
+  node_09_search:
+    build: ./nodes/Node_09_Search
+    container_name: ufo_node_09
+    environment:
+      - NODE_ID=09
+      - NODE_NAME=Search
+    networks:
+      net_tools:
+        ipv4_address: 10.88.2.9
+    ports:
+      - "8009:8009"
+    restart: unless-stopped
+
+  # Node 10: Slack
+  node_10_slack:
+    build: ./nodes/Node_10_Slack
+    container_name: ufo_node_10
+    environment:
+      - NODE_ID=10
+      - NODE_NAME=Slack
+      - SLACK_TOKEN=${SLACK_TOKEN:-}
+    env_file:
+      - ./config/.env
+    networks:
+      net_tools:
+        ipv4_address: 10.88.2.10
+    ports:
+      - "8010:8010"
+    restart: unless-stopped
+
+  # Node 11: GitHub
+  node_11_github:
+    build: ./nodes/Node_11_GitHub
+    container_name: ufo_node_11
+    environment:
+      - NODE_ID=11
+      - NODE_NAME=GitHub
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+    env_file:
+      - ./config/.env
+    networks:
+      net_tools:
+        ipv4_address: 10.88.2.11
+    ports:
+      - "8011:8011"
+    restart: unless-stopped
+
+  # Node 12: Postgres
+  node_12_postgres:
+    build: ./nodes/Node_12_Postgres
+    container_name: ufo_node_12
+    environment:
+      - NODE_ID=12
+      - NODE_NAME=Postgres
+      - DATABASE_URL=${DATABASE_URL:-}
+    env_file:
+      - ./config/.env
+    networks:
+      net_tools:
+        ipv4_address: 10.88.2.12
+    ports:
+      - "8012:8012"
+    restart: unless-stopped
+
+  # Node 13: SQLite
+  node_13_sqlite:
+    build: ./nodes/Node_13_SQLite
+    container_name: ufo_node_13
+    environment:
+      - NODE_ID=13
+      - NODE_NAME=SQLite
+    volumes:
+      - sqlite_data:/app/data
+    networks:
+      net_tools:
+        ipv4_address: 10.88.2.13
+    ports:
+      - "8013:8013"
+    restart: unless-stopped
+
+  # Node 14: FFmpeg
+  node_14_ffmpeg:
+    build: ./nodes/Node_14_FFmpeg
+    container_name: ufo_node_14
+    environment:
+      - NODE_ID=14
+      - NODE_NAME=FFmpeg
+    volumes:
+      - media_data:/app/media
+    networks:
+      net_tools:
+        ipv4_address: 10.88.2.14
+    ports:
+      - "8014:8014"
+    restart: unless-stopped
+
+  # Node 15: OCR
+  node_15_ocr:
+    build: ./nodes/Node_15_OCR
+    container_name: ufo_node_15
+    environment:
+      - NODE_ID=15
+      - NODE_NAME=OCR
+    networks:
+      net_tools:
+        ipv4_address: 10.88.2.15
+    ports:
+      - "8015:8015"
+    restart: unless-stopped
+
+  # Node 16: Email
+  node_16_email:
+    build: ./nodes/Node_16_Email
+    container_name: ufo_node_16
+    environment:
+      - NODE_ID=16
+      - NODE_NAME=Email
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+    env_file:
+      - ./config/.env
+    networks:
+      net_tools:
+        ipv4_address: 10.88.2.16
+    ports:
+      - "8016:8016"
+    restart: unless-stopped
+
+  # Node 17: EdgeTTS
+  node_17_edgetts:
+    build: ./nodes/Node_17_EdgeTTS
+    container_name: ufo_node_17
+    environment:
+      - NODE_ID=17
+      - NODE_NAME=EdgeTTS
+    networks:
+      net_tools:
+        ipv4_address: 10.88.2.17
+    ports:
+      - "8017:8017"
+    restart: unless-stopped
+
+  # Node 18: DeepL
+  node_18_deepl:
+    build: ./nodes/Node_18_DeepL
+    container_name: ufo_node_18
+    environment:
+      - NODE_ID=18
+      - NODE_NAME=DeepL
+      - DEEPL_API_KEY=${DEEPL_API_KEY:-}
+    env_file:
+      - ./config/.env
+    networks:
+      net_tools:
+        ipv4_address: 10.88.2.18
+    ports:
+      - "8018:8018"
+    restart: unless-stopped
+
+  # Node 19: Crypto
+  node_19_crypto:
+    build: ./nodes/Node_19_Crypto
+    container_name: ufo_node_19
+    environment:
+      - NODE_ID=19
+      - NODE_NAME=Crypto
+    networks:
+      net_tools:
+        ipv4_address: 10.88.2.19
+    ports:
+      - "8019:8019"
+    restart: unless-stopped
+
+  # Node 20: Qdrant
+  node_20_qdrant:
+    build: ./nodes/Node_20_Qdrant
+    container_name: ufo_node_20
+    environment:
+      - NODE_ID=20
+      - NODE_NAME=Qdrant
+      - QDRANT_URL=${QDRANT_URL:-http://host.containers.internal:6333}
+    env_file:
+      - ./config/.env
+    networks:
+      net_tools:
+        ipv4_address: 10.88.2.20
+    ports:
+      - "8020:8020"
+    restart: unless-stopped
+
+  # Node 21: Notion
+  node_21_notion:
+    build: ./nodes/Node_21_Notion
+    container_name: ufo_node_21
+    environment:
+      - NODE_ID=21
+      - NODE_NAME=Notion
+      - NOTION_TOKEN=${NOTION_TOKEN:-}
+    env_file:
+      - ./config/.env
+    networks:
+      net_tools:
+        ipv4_address: 10.88.2.21
+    ports:
+      - "8021:8021"
+    restart: unless-stopped
+
+  # Node 22: BraveSearch
+  node_22_bravesearch:
+    build: ./nodes/Node_22_BraveSearch
+    container_name: ufo_node_22
+    environment:
+      - NODE_ID=22
+      - NODE_NAME=BraveSearch
+      - BRAVE_API_KEY=${BRAVE_API_KEY:-}
+    env_file:
+      - ./config/.env
+    networks:
+      net_tools:
+        ipv4_address: 10.88.2.22
+    ports:
+      - "8022:8022"
+    restart: unless-stopped
+
+  # Node 23: Time
+  node_23_time:
+    build: ./nodes/Node_23_Time
+    container_name: ufo_node_23
+    environment:
+      - NODE_ID=23
+      - NODE_NAME=Time
+    networks:
+      net_tools:
+        ipv4_address: 10.88.2.23
+    ports:
+      - "8023:8023"
+    restart: unless-stopped
+
+  # Node 24: Weather
+  node_24_weather:
+    build: ./nodes/Node_24_Weather
+    container_name: ufo_node_24
+    environment:
+      - NODE_ID=24
+      - NODE_NAME=Weather
+      - WEATHER_API_KEY=${WEATHER_API_KEY:-}
+    env_file:
+      - ./config/.env
+    networks:
+      net_tools:
+        ipv4_address: 10.88.2.24
+    ports:
+      - "8024:8024"
+    restart: unless-stopped
+
+  # Node 25: GoogleSearch
+  node_25_googlesearch:
+    build: ./nodes/Node_25_GoogleSearch
+    container_name: ufo_node_25
+    environment:
+      - NODE_ID=25
+      - NODE_NAME=GoogleSearch
+    networks:
+      net_tools:
+        ipv4_address: 10.88.2.25
+    ports:
+      - "8025:8025"
+    restart: unless-stopped
+
+  #############################################################################
+  # LAYER 3: PHYSICAL (The Body - ISOLATED) - Nodes 33-49
+  #############################################################################
+
+  # Node 33: Android ADB Wrapper
+  node_33_adb:
+    build: ./nodes/Node_33_ADB
+    container_name: ufo_node_33
+    environment:
+      - NODE_ID=33
+      - NODE_NAME=AndroidADB
+    privileged: true
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+    networks:
+      net_phys:
+        ipv4_address: 10.88.3.33
+    ports:
+      - "8033:8033"
+    restart: unless-stopped
+
+  # Node 34: Scrcpy Visual Stream
+  node_34_scrcpy:
+    build: ./nodes/Node_34_Scrcpy
+    container_name: ufo_node_34
+    environment:
+      - NODE_ID=34
+      - NODE_NAME=ScrcpyStream
+    depends_on:
+      - node_33_adb
+    networks:
+      net_phys:
+        ipv4_address: 10.88.3.34
+    ports:
+      - "8034:8034"
+    restart: unless-stopped
+
+  # Node 35: AppleScript
+  node_35_applescript:
+    build: ./nodes/Node_35_AppleScript
+    container_name: ufo_node_35
+    environment:
+      - NODE_ID=35
+      - NODE_NAME=AppleScript
+    networks:
+      net_phys:
+        ipv4_address: 10.88.3.35
+    ports:
+      - "8035:8035"
+    restart: unless-stopped
+
+  # Node 36: UIA Windows
+  node_36_uiawindows:
+    build: ./nodes/Node_36_UIAWindows
+    container_name: ufo_node_36
+    environment:
+      - NODE_ID=36
+      - NODE_NAME=UIAWindows
+    networks:
+      net_phys:
+        ipv4_address: 10.88.3.36
+    ports:
+      - "8036:8036"
+    restart: unless-stopped
+
+  # Node 37: Linux D-Bus
+  node_37_linuxdbus:
+    build: ./nodes/Node_37_LinuxDBus
+    container_name: ufo_node_37
+    environment:
+      - NODE_ID=37
+      - NODE_NAME=LinuxDBus
+    networks:
+      net_phys:
+        ipv4_address: 10.88.3.37
+    ports:
+      - "8037:8037"
+    restart: unless-stopped
+
+  # Node 38: BLE
+  node_38_ble:
+    build: ./nodes/Node_38_BLE
+    container_name: ufo_node_38
+    environment:
+      - NODE_ID=38
+      - NODE_NAME=BLE
+    privileged: true
+    networks:
+      net_phys:
+        ipv4_address: 10.88.3.38
+    ports:
+      - "8038:8038"
+    restart: unless-stopped
+
+  # Node 39: SSH
+  node_39_ssh:
+    build: ./nodes/Node_39_SSH
+    container_name: ufo_node_39
+    environment:
+      - NODE_ID=39
+      - NODE_NAME=SSH
+    networks:
+      net_phys:
+        ipv4_address: 10.88.3.39
+    ports:
+      - "8039:8039"
+    restart: unless-stopped
+
+  # Node 40: SFTP
+  node_40_sftp:
+    build: ./nodes/Node_40_SFTP
+    container_name: ufo_node_40
+    environment:
+      - NODE_ID=40
+      - NODE_NAME=SFTP
+    networks:
+      net_phys:
+        ipv4_address: 10.88.3.40
+    ports:
+      - "8040:8040"
+    restart: unless-stopped
+
+  # Node 41: MQTT
+  node_41_mqtt:
+    build: ./nodes/Node_41_MQTT
+    container_name: ufo_node_41
+    environment:
+      - NODE_ID=41
+      - NODE_NAME=MQTT
+      - MQTT_BROKER=${MQTT_BROKER:-}
+    env_file:
+      - ./config/.env
+    networks:
+      net_phys:
+        ipv4_address: 10.88.3.41
+    ports:
+      - "8041:8041"
+    restart: unless-stopped
+
+  # Node 42: CAN-bus
+  node_42_canbus:
+    build: ./nodes/Node_42_CANbus
+    container_name: ufo_node_42
+    environment:
+      - NODE_ID=42
+      - NODE_NAME=CANbus
+    privileged: true
+    networks:
+      net_phys:
+        ipv4_address: 10.88.3.42
+    ports:
+      - "8042:8042"
+    restart: unless-stopped
+
+  # Node 43: MAVLink
+  node_43_mavlink:
+    build: ./nodes/Node_43_MAVLink
+    container_name: ufo_node_43
+    environment:
+      - NODE_ID=43
+      - NODE_NAME=MAVLink
+    networks:
+      net_phys:
+        ipv4_address: 10.88.3.43
+    ports:
+      - "8043:8043"
+    restart: unless-stopped
+
+  # Node 44: NFC
+  node_44_nfc:
+    build: ./nodes/Node_44_NFC
+    container_name: ufo_node_44
+    environment:
+      - NODE_ID=44
+      - NODE_NAME=NFC
+    privileged: true
+    networks:
+      net_phys:
+        ipv4_address: 10.88.3.44
+    ports:
+      - "8044:8044"
+    restart: unless-stopped
+
+  # Node 45: Desktop Auto
+  node_45_desktopauto:
+    build: ./nodes/Node_45_DesktopAuto
+    container_name: ufo_node_45
+    environment:
+      - NODE_ID=45
+      - NODE_NAME=DesktopAuto
+    networks:
+      net_phys:
+        ipv4_address: 10.88.3.45
+    ports:
+      - "8045:8045"
+    restart: unless-stopped
+
+  # Node 46: Camera
+  node_46_camera:
+    build: ./nodes/Node_46_Camera
+    container_name: ufo_node_46
+    environment:
+      - NODE_ID=46
+      - NODE_NAME=Camera
+    devices:
+      - /dev/video0:/dev/video0
+    networks:
+      net_phys:
+        ipv4_address: 10.88.3.46
+    ports:
+      - "8046:8046"
+    restart: unless-stopped
+
+  # Node 47: Audio
+  node_47_audio:
+    build: ./nodes/Node_47_Audio
+    container_name: ufo_node_47
+    environment:
+      - NODE_ID=47
+      - NODE_NAME=Audio
+    networks:
+      net_phys:
+        ipv4_address: 10.88.3.47
+    ports:
+      - "8047:8047"
+    restart: unless-stopped
+
+  # Node 48: Serial
+  node_48_serial:
+    build: ./nodes/Node_48_Serial
+    container_name: ufo_node_48
+    environment:
+      - NODE_ID=48
+      - NODE_NAME=Serial
+    privileged: true
+    networks:
+      net_phys:
+        ipv4_address: 10.88.3.48
+    ports:
+      - "8048:8048"
+    restart: unless-stopped
+
+  # Node 49: OctoPrint 3D Printer Wrapper
+  node_49_octoprint:
+    build: ./nodes/Node_49_OctoPrint
+    container_name: ufo_node_49
+    environment:
+      - NODE_ID=49
+      - NODE_NAME=OctoPrint
+      - OCTOPRINT_URL=${OCTOPRINT_URL:-http://localhost:5000}
+      - OCTOPRINT_API_KEY=${OCTOPRINT_API_KEY:-}
+    env_file:
+      - ./config/.env
+    networks:
+      net_phys:
+        ipv4_address: 10.88.3.49
+    ports:
+      - "8049:8049"
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  secrets_data:
+  workspace_data:
+  telemetry_data:
+  logs_data:
+  backup_data:
+  model_router_data:
+  sqlite_data:
+  media_data:
+
+  # ============================================
+  # Reserved Nodes (26-32) - 预留扩展
+  # ============================================
+  node_26_reserved:
+    build: ./nodes/Node_26_Reserved
+    container_name: ufo_node_26
+    networks:
+      - net_tools
+    ports:
+      - "8026:8026"
+    environment:
+      - NODE_ID=26
+      - NODE_NAME=Reserved
+    restart: unless-stopped
+
+  node_27_reserved:
+    build: ./nodes/Node_27_Reserved
+    container_name: ufo_node_27
+    networks:
+      - net_tools
+    ports:
+      - "8027:8027"
+    environment:
+      - NODE_ID=27
+      - NODE_NAME=Reserved
+    restart: unless-stopped
+
+  node_28_reserved:
+    build: ./nodes/Node_28_Reserved
+    container_name: ufo_node_28
+    networks:
+      - net_tools
+    ports:
+      - "8028:8028"
+    environment:
+      - NODE_ID=28
+      - NODE_NAME=Reserved
+    restart: unless-stopped
+
+  node_29_reserved:
+    build: ./nodes/Node_29_Reserved
+    container_name: ufo_node_29
+    networks:
+      - net_tools
+    ports:
+      - "8029:8029"
+    environment:
+      - NODE_ID=29
+      - NODE_NAME=Reserved
+    restart: unless-stopped
+
+  node_30_reserved:
+    build: ./nodes/Node_30_Reserved
+    container_name: ufo_node_30
+    networks:
+      - net_tools
+    ports:
+      - "8030:8030"
+    environment:
+      - NODE_ID=30
+      - NODE_NAME=Reserved
+    restart: unless-stopped
+
+  node_31_reserved:
+    build: ./nodes/Node_31_Reserved
+    container_name: ufo_node_31
+    networks:
+      - net_tools
+    ports:
+      - "8031:8031"
+    environment:
+      - NODE_ID=31
+      - NODE_NAME=Reserved
+    restart: unless-stopped
+
+  node_32_reserved:
+    build: ./nodes/Node_32_Reserved
+    container_name: ufo_node_32
+    networks:
+      - net_tools
+    ports:
+      - "8032:8032"
+    environment:
+      - NODE_ID=32
+      - NODE_NAME=Reserved
+    restart: unless-stopped
+
+  # ============================================
+  # Node 66: Config Manager
+  # ============================================
+  node_66_configmanager:
+    build: ./nodes/Node_66_ConfigManager
+    container_name: ufo_node_66
+    networks:
+      - net_kernel
+      - net_gateway
+      - net_tools
+    ports:
+      - "8066:8066"
+    volumes:
+      - config_data:/app/data
+    restart: unless-stopped
