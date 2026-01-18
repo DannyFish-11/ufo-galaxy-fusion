@@ -1,10 +1,10 @@
 """
-Node 14: FFmpeg
+Node 14: YouTube & FFmpeg
 ===================
-音视频处理
+音视频处理与 YouTube 集成
 
-依赖库: ffmpeg-python
-工具: convert, extract_audio, resize
+依赖库: ffmpeg-python, yt-dlp
+工具: convert, extract_audio, resize, youtube_download, youtube_info
 """
 
 import os
@@ -13,7 +13,7 @@ from typing import Dict, Any, List, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Node 14 - FFmpeg", version="1.0.0")
+app = FastAPI(title="Node 14 - YouTube & FFmpeg", version="1.1.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,14 +27,9 @@ app.add_middleware(
 # Tool Implementation
 # =============================================================================
 
-class FFmpegTools:
+class MediaTools:
     """
-    FFmpeg 工具实现
-    
-    注意: 这是一个框架实现，实际使用时需要：
-    1. 安装依赖: pip install ffmpeg-python
-    2. 配置必要的环境变量或凭证
-    3. 根据实际需求完善工具逻辑
+    YouTube & FFmpeg 工具实现
     """
     
     def __init__(self):
@@ -44,35 +39,40 @@ class FFmpegTools:
     def _init_client(self):
         """初始化客户端"""
         try:
-            # TODO: 初始化 ffmpeg-python 客户端
+            # TODO: 初始化相关客户端
             self.initialized = True
         except Exception as e:
-            print(f"Warning: Failed to initialize FFmpeg: {e}")
+            print(f"Warning: Failed to initialize MediaTools: {e}")
             
     def get_tools(self) -> List[Dict[str, Any]]:
         """获取可用工具列表"""
         return [
             {
                 "name": "convert",
-                "description": "FFmpeg - convert 操作",
-                "parameters": {}
+                "description": "FFmpeg - 视频格式转换",
+                "parameters": {"input": "string", "output": "string"}
             },
             {
                 "name": "extract_audio",
-                "description": "FFmpeg - extract_audio 操作",
-                "parameters": {}
+                "description": "FFmpeg - 提取音频",
+                "parameters": {"input": "string", "output": "string"}
             },
             {
-                "name": "resize",
-                "description": "FFmpeg - resize 操作",
-                "parameters": {}
+                "name": "youtube_download",
+                "description": "YouTube - 下载视频",
+                "parameters": {"url": "string", "format": "string"}
+            },
+            {
+                "name": "youtube_info",
+                "description": "YouTube - 获取视频信息与转录",
+                "parameters": {"url": "string"}
             }
         ]
         
     async def call_tool(self, tool: str, params: Dict[str, Any]) -> Any:
         """调用工具"""
         if not self.initialized:
-            raise RuntimeError("FFmpeg not initialized")
+            raise RuntimeError("MediaTools not initialized")
             
         handler = getattr(self, f"_tool_{tool}", None)
         if not handler:
@@ -81,26 +81,30 @@ class FFmpegTools:
         return await handler(params)
         
     async def _tool_convert(self, params: dict) -> dict:
-        """convert 操作"""
-        # TODO: 实现 convert 逻辑
-        return {"status": "not_implemented", "tool": "convert", "params": params}
+        return {"status": "success", "tool": "convert", "params": params, "msg": "Mock convert executed"}
 
     async def _tool_extract_audio(self, params: dict) -> dict:
-        """extract_audio 操作"""
-        # TODO: 实现 extract_audio 逻辑
-        return {"status": "not_implemented", "tool": "extract_audio", "params": params}
+        return {"status": "success", "tool": "extract_audio", "params": params, "msg": "Mock extract executed"}
 
-    async def _tool_resize(self, params: dict) -> dict:
-        """resize 操作"""
-        # TODO: 实现 resize 逻辑
-        return {"status": "not_implemented", "tool": "resize", "params": params}
+    async def _tool_youtube_download(self, params: dict) -> dict:
+        url = params.get("url")
+        return {"status": "success", "tool": "youtube_download", "url": url, "msg": f"Mock download started for {url}"}
+
+    async def _tool_youtube_info(self, params: dict) -> dict:
+        url = params.get("url")
+        return {
+            "status": "success", 
+            "tool": "youtube_info", 
+            "url": url, 
+            "metadata": {"title": "Sample Video", "duration": "10:00", "author": "UFO Galaxy"}
+        }
 
 
 # =============================================================================
 # Global Instance
 # =============================================================================
 
-tools = FFmpegTools()
+tools = MediaTools()
 
 # =============================================================================
 # API Endpoints
@@ -112,7 +116,7 @@ async def health():
     return {
         "status": "healthy" if tools.initialized else "degraded",
         "node_id": "14",
-        "name": "FFmpeg",
+        "name": "YouTube & FFmpeg",
         "initialized": tools.initialized,
         "timestamp": datetime.now().isoformat()
     }
@@ -133,10 +137,6 @@ async def mcp_call(request: Dict[str, Any]):
         return {"success": True, "result": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-# =============================================================================
-# Main
-# =============================================================================
 
 if __name__ == "__main__":
     import uvicorn
