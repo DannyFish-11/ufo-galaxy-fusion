@@ -1,142 +1,73 @@
-"""
-Node 36: UIAWindows
-=======================
-Windows UI 自动化
-
-依赖库: pywinauto
-工具: click, type_text, find_window
-"""
-
-import os
+"""Node 36: UIAWindows - Windows UI Automation"""
+import os, subprocess
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Node 36 - UIAWindows", version="1.0.0")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# =============================================================================
-# Tool Implementation
-# =============================================================================
-
-class UIAWindowsTools:
-    """
-    UIAWindows 工具实现
-    
-    注意: 这是一个框架实现，实际使用时需要：
-    1. 安装依赖: pip install pywinauto
-    2. 配置必要的环境变量或凭证
-    3. 根据实际需求完善工具逻辑
-    """
-    
+class UIATools:
     def __init__(self):
-        self.initialized = False
-        self._init_client()
-        
-    def _init_client(self):
-        """初始化客户端"""
-        try:
-            # TODO: 初始化 pywinauto 客户端
-            self.initialized = True
-        except Exception as e:
-            print(f"Warning: Failed to initialize UIAWindows: {e}")
-            
-    def get_tools(self) -> List[Dict[str, Any]]:
-        """获取可用工具列表"""
+        self.initialized = True
+    def get_tools(self):
         return [
-            {
-                "name": "click",
-                "description": "UIAWindows - click 操作",
-                "parameters": {}
-            },
-            {
-                "name": "type_text",
-                "description": "UIAWindows - type_text 操作",
-                "parameters": {}
-            },
-            {
-                "name": "find_window",
-                "description": "UIAWindows - find_window 操作",
-                "parameters": {}
-            }
+            {"name": "click", "description": "点击元素", "parameters": {"x": "X坐标", "y": "Y坐标"}},
+            {"name": "type_text", "description": "输入文本", "parameters": {"text": "文本内容"}},
+            {"name": "press_key", "description": "按键", "parameters": {"key": "按键名称"}},
+            {"name": "screenshot", "description": "截图", "parameters": {}}
         ]
-        
-    async def call_tool(self, tool: str, params: Dict[str, Any]) -> Any:
-        """调用工具"""
-        if not self.initialized:
-            raise RuntimeError("UIAWindows not initialized")
-            
-        handler = getattr(self, f"_tool_{tool}", None)
-        if not handler:
-            raise ValueError(f"Unknown tool: {tool}")
-            
-        return await handler(params)
-        
-    async def _tool_click(self, params: dict) -> dict:
-        """click 操作"""
-        # TODO: 实现 click 逻辑
-        return {"status": "not_implemented", "tool": "click", "params": params}
+    async def call_tool(self, tool: str, params: dict):
+        if tool == "click":
+            # 使用 pyautogui 点击
+            try:
+                import pyautogui
+                pyautogui.click(params.get("x", 0), params.get("y", 0))
+                return {"success": True, "message": f"已点击 ({params.get('x')}, {params.get('y')})"}
+            except Exception as e:
+                return {"error": str(e)}
+        elif tool == "type_text":
+            try:
+                import pyautogui
+                pyautogui.write(params.get("text", ""))
+                return {"success": True, "message": f"已输入文本"}
+            except Exception as e:
+                return {"error": str(e)}
+        elif tool == "press_key":
+            try:
+                import pyautogui
+                pyautogui.press(params.get("key", "enter"))
+                return {"success": True, "message": f"已按下 {params.get('key')}"}
+            except Exception as e:
+                return {"error": str(e)}
+        elif tool == "screenshot":
+            try:
+                import pyautogui
+                screenshot = pyautogui.screenshot()
+                path = f"/tmp/screenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                screenshot.save(path)
+                return {"success": True, "path": path}
+            except Exception as e:
+                return {"error": str(e)}
+        return {"error": "Unknown tool"}
 
-    async def _tool_type_text(self, params: dict) -> dict:
-        """type_text 操作"""
-        # TODO: 实现 type_text 逻辑
-        return {"status": "not_implemented", "tool": "type_text", "params": params}
-
-    async def _tool_find_window(self, params: dict) -> dict:
-        """find_window 操作"""
-        # TODO: 实现 find_window 逻辑
-        return {"status": "not_implemented", "tool": "find_window", "params": params}
-
-
-# =============================================================================
-# Global Instance
-# =============================================================================
-
-tools = UIAWindowsTools()
-
-# =============================================================================
-# API Endpoints
-# =============================================================================
+tools = UIATools()
 
 @app.get("/health")
 async def health():
-    """健康检查"""
-    return {
-        "status": "healthy" if tools.initialized else "degraded",
-        "node_id": "36",
-        "name": "UIAWindows",
-        "initialized": tools.initialized,
-        "timestamp": datetime.now().isoformat()
-    }
+    return {"status": "healthy", "node_id": "36", "name": "UIAWindows", "timestamp": datetime.now().isoformat()}
 
 @app.get("/tools")
 async def list_tools():
-    """列出可用工具"""
     return {"tools": tools.get_tools()}
 
 @app.post("/mcp/call")
-async def mcp_call(request: Dict[str, Any]):
-    """MCP 工具调用接口"""
-    tool = request.get("tool", "")
-    params = request.get("params", {})
-    
+async def mcp_call(request: dict):
     try:
-        result = await tools.call_tool(tool, params)
-        return {"success": True, "result": result}
+        return {"success": True, "result": await tools.call_tool(request.get("tool"), request.get("params", {}))}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-# =============================================================================
-# Main
-# =============================================================================
 
 if __name__ == "__main__":
     import uvicorn

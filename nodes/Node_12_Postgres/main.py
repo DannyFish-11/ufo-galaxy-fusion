@@ -1,142 +1,68 @@
 """
 Node 12: Postgres
-=====================
+====================
 PostgreSQL 数据库
-
-依赖库: psycopg2-binary
-工具: query, execute, connect
 """
 
 import os
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Node 12 - Postgres", version="1.0.0")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# =============================================================================
-# Tool Implementation
-# =============================================================================
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 class PostgresTools:
-    """
-    Postgres 工具实现
-    
-    注意: 这是一个框架实现，实际使用时需要：
-    1. 安装依赖: pip install psycopg2-binary
-    2. 配置必要的环境变量或凭证
-    3. 根据实际需求完善工具逻辑
-    """
-    
     def __init__(self):
-        self.initialized = False
-        self._init_client()
         
-    def _init_client(self):
-        """初始化客户端"""
+        # 需要 psycopg2 库
+        import psycopg2
+        self.conn_string = os.getenv("POSTGRES_CONN", "")
+        
+    async def _tool_query(self, params):
         try:
-            # TODO: 初始化 psycopg2-binary 客户端
-            self.initialized = True
+            conn = psycopg2.connect(self.conn_string)
+            cur = conn.cursor()
+            cur.execute(params.get("sql", ""))
+            results = cur.fetchall()
+            conn.close()
+            return {"success": True, "results": results}
         except Exception as e:
-            print(f"Warning: Failed to initialize Postgres: {e}")
-            
-    def get_tools(self) -> List[Dict[str, Any]]:
-        """获取可用工具列表"""
+            return {"error": str(e)}
+
+        self.initialized = True
+        
+    def get_tools(self):
         return [
-            {
-                "name": "query",
-                "description": "Postgres - query 操作",
-                "parameters": {}
-            },
-            {
-                "name": "execute",
-                "description": "Postgres - execute 操作",
-                "parameters": {}
-            },
-            {
-                "name": "connect",
-                "description": "Postgres - connect 操作",
-                "parameters": {}
-            }
+            {"name": "query", "description": "执行查询", "parameters": {'sql': 'SQL 语句'}},
+            {"name": "execute", "description": "执行命令", "parameters": {'sql': 'SQL 语句'}}
         ]
         
-    async def call_tool(self, tool: str, params: Dict[str, Any]) -> Any:
-        """调用工具"""
+    async def call_tool(self, tool: str, params: dict):
         if not self.initialized:
             raise RuntimeError("Postgres not initialized")
-            
         handler = getattr(self, f"_tool_{tool}", None)
         if not handler:
             raise ValueError(f"Unknown tool: {tool}")
-            
         return await handler(params)
-        
-    async def _tool_query(self, params: dict) -> dict:
-        """query 操作"""
-        # TODO: 实现 query 逻辑
-        return {"status": "not_implemented", "tool": "query", "params": params}
-
-    async def _tool_execute(self, params: dict) -> dict:
-        """execute 操作"""
-        # TODO: 实现 execute 逻辑
-        return {"status": "not_implemented", "tool": "execute", "params": params}
-
-    async def _tool_connect(self, params: dict) -> dict:
-        """connect 操作"""
-        # TODO: 实现 connect 逻辑
-        return {"status": "not_implemented", "tool": "connect", "params": params}
-
-
-# =============================================================================
-# Global Instance
-# =============================================================================
 
 tools = PostgresTools()
 
-# =============================================================================
-# API Endpoints
-# =============================================================================
-
 @app.get("/health")
 async def health():
-    """健康检查"""
-    return {
-        "status": "healthy" if tools.initialized else "degraded",
-        "node_id": "12",
-        "name": "Postgres",
-        "initialized": tools.initialized,
-        "timestamp": datetime.now().isoformat()
-    }
+    return {"status": "healthy" if tools.initialized else "degraded", "node_id": "12", "name": "Postgres", "timestamp": datetime.now().isoformat()}
 
 @app.get("/tools")
 async def list_tools():
-    """列出可用工具"""
     return {"tools": tools.get_tools()}
 
 @app.post("/mcp/call")
-async def mcp_call(request: Dict[str, Any]):
-    """MCP 工具调用接口"""
-    tool = request.get("tool", "")
-    params = request.get("params", {})
-    
+async def mcp_call(request: dict):
     try:
-        result = await tools.call_tool(tool, params)
-        return {"success": True, "result": result}
+        return {"success": True, "result": await tools.call_tool(request.get("tool"), request.get("params", {}))}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-# =============================================================================
-# Main
-# =============================================================================
 
 if __name__ == "__main__":
     import uvicorn

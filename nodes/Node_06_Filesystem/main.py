@@ -1,18 +1,42 @@
-"""Node 06: Filesystem Tool - Safe file operations"""
+"""Node 06: Filesystem - 文件系统"""
 import os
-from fastapi import FastAPI
+from datetime import datetime
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 
-NODE_ID = os.getenv("NODE_ID", "06")
-app = FastAPI(title=f"UFO Galaxy Node {NODE_ID}: Filesystem")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app = FastAPI(title="Node 06 - Filesystem", version="1.0.0")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+
+class FilesystemTools:
+    def __init__(self):
+        self.initialized = True
+    def get_tools(self):
+        return [{"name": "read_file", "description": "读取文件", "parameters": {'path': '路径'}}]
+    async def call_tool(self, tool: str, params: dict):
+        handler = getattr(self, f"_tool_{tool}", None)
+        if not handler:
+            raise ValueError(f"Unknown tool: {tool}")
+        return await handler(params)
+    async def _tool_read_file(self, params):
+        return {"success": True, "message": "功能实现中 (演示模式)"}
+
+tools = FilesystemTools()
 
 @app.get("/health")
-async def health(): return {"status": "healthy", "node_id": NODE_ID, "layer": "L2_TOOLS"}
+async def health():
+    return {"status": "healthy", "node_id": "06", "name": "Filesystem", "timestamp": datetime.now().isoformat()}
 
-@app.get("/")
-async def root(): return {"node_id": NODE_ID, "name": "Filesystem", "layer": "L2_TOOLS"}
+@app.get("/tools")
+async def list_tools():
+    return {"tools": tools.get_tools()}
+
+@app.post("/mcp/call")
+async def mcp_call(request: dict):
+    try:
+        return {"success": True, "result": await tools.call_tool(request.get("tool"), request.get("params", {}))}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8006)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8006)

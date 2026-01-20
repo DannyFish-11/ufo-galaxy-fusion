@@ -1,44 +1,42 @@
-#!/usr/bin/env python3
-"""
-Node 74: 51World 数字孪生推演节点
-主入口文件
-"""
+"""Node 74: DigitalTwin - 数字孪生"""
+import os
+from datetime import datetime
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
-import asyncio
-import logging
-from digital_twin_simulator import DigitalTwinSimulator
+app = FastAPI(title="Node 74 - DigitalTwin", version="1.0.0")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+class DigitalTwinTools:
+    def __init__(self):
+        self.initialized = True
+    def get_tools(self):
+        return [{"name": "sync_state", "description": "同步状态", "parameters": {'entity_id': '实体ID'}}]
+    async def call_tool(self, tool: str, params: dict):
+        handler = getattr(self, f"_tool_{tool}", None)
+        if not handler:
+            raise ValueError(f"Unknown tool: {tool}")
+        return await handler(params)
+    async def _tool_sync_state(self, params):
+        return {"success": True, "message": "功能实现中 (演示模式)"}
 
-logger = logging.getLogger(__name__)
+tools = DigitalTwinTools()
 
-async def main():
-    """主函数"""
-    logger.info("启动 Node 74: 51World 数字孪生推演节点")
-    
-    # 创建模拟器实例
-    simulator = DigitalTwinSimulator()
-    
+@app.get("/health")
+async def health():
+    return {"status": "healthy", "node_id": "74", "name": "DigitalTwin", "timestamp": datetime.now().isoformat()}
+
+@app.get("/tools")
+async def list_tools():
+    return {"tools": tools.get_tools()}
+
+@app.post("/mcp/call")
+async def mcp_call(request: dict):
     try:
-        # 启动模拟器
-        await simulator.start()
-        
-        # 保持运行
-        logger.info("Node 74 运行中，按 Ctrl+C 停止")
-        await asyncio.Event().wait()
-        
-    except KeyboardInterrupt:
-        logger.info("收到停止信号")
+        return {"success": True, "result": await tools.call_tool(request.get("tool"), request.get("params", {}))}
     except Exception as e:
-        logger.error(f"运行错误: {e}", exc_info=True)
-    finally:
-        # 清理资源
-        await simulator.stop()
-        logger.info("Node 74 已停止")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8074)

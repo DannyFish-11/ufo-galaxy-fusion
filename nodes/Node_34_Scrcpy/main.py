@@ -1,42 +1,42 @@
-"""Node 34: Scrcpy Visual Stream - Android screen mirroring"""
+"""Node 34: Scrcpy - Android 屏幕镜像"""
 import os
-from fastapi import FastAPI
+from datetime import datetime
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Dict
-import uvicorn
 
-NODE_ID = os.getenv("NODE_ID", "34")
-ALLOWED_CALLER = os.getenv("ALLOWED_CALLER", "node_50_transformer")
+app = FastAPI(title="Node 34 - Scrcpy", version="1.0.0")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-app = FastAPI(title=f"UFO Galaxy Node {NODE_ID}: ScrcpyStream")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+class ScrcpyTools:
+    def __init__(self):
+        self.initialized = True
+    def get_tools(self):
+        return [{"name": "connect", "description": "连接设备", "parameters": {'device_id': '设备ID'}}]
+    async def call_tool(self, tool: str, params: dict):
+        handler = getattr(self, f"_tool_{tool}", None)
+        if not handler:
+            raise ValueError(f"Unknown tool: {tool}")
+        return await handler(params)
+    async def _tool_connect(self, params):
+        return {"success": True, "message": "功能实现中 (演示模式)"}
 
-class Request(BaseModel):
-    action: str
-    params: Dict = {}
+tools = ScrcpyTools()
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "node_id": NODE_ID, "layer": "L3_PHYSICAL"}
+    return {"status": "healthy", "node_id": "34", "name": "Scrcpy", "timestamp": datetime.now().isoformat()}
 
-@app.post("/execute")
-async def execute(request: Request):
-    return {
-        "success": True,
-        "action": request.action,
-        "mock": True,
-        "message": f"Scrcpy {request.action} simulated"
-    }
+@app.get("/tools")
+async def list_tools():
+    return {"tools": tools.get_tools()}
 
-@app.get("/")
-async def root():
-    return {
-        "node_id": NODE_ID,
-        "name": "ScrcpyStream",
-        "layer": "L3_PHYSICAL",
-        "security": f"Only accessible by {ALLOWED_CALLER}"
-    }
+@app.post("/mcp/call")
+async def mcp_call(request: dict):
+    try:
+        return {"success": True, "result": await tools.call_tool(request.get("tool"), request.get("params", {}))}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8034)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8034)

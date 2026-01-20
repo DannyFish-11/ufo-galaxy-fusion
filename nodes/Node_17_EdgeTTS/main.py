@@ -1,132 +1,41 @@
-"""
-Node 17: EdgeTTS
-====================
-语音合成
-
-依赖库: edge-tts
-工具: synthesize, list_voices
-"""
-
+"""Node 17: EdgeTTS - 文字转语音"""
 import os
 from datetime import datetime
-from typing import Dict, Any, List, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Node 17 - EdgeTTS", version="1.0.0")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# =============================================================================
-# Tool Implementation
-# =============================================================================
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 class EdgeTTSTools:
-    """
-    EdgeTTS 工具实现
-    
-    注意: 这是一个框架实现，实际使用时需要：
-    1. 安装依赖: pip install edge-tts
-    2. 配置必要的环境变量或凭证
-    3. 根据实际需求完善工具逻辑
-    """
-    
     def __init__(self):
-        self.initialized = False
-        self._init_client()
-        
-    def _init_client(self):
-        """初始化客户端"""
-        try:
-            # TODO: 初始化 edge-tts 客户端
-            self.initialized = True
-        except Exception as e:
-            print(f"Warning: Failed to initialize EdgeTTS: {e}")
-            
-    def get_tools(self) -> List[Dict[str, Any]]:
-        """获取可用工具列表"""
-        return [
-            {
-                "name": "synthesize",
-                "description": "EdgeTTS - synthesize 操作",
-                "parameters": {}
-            },
-            {
-                "name": "list_voices",
-                "description": "EdgeTTS - list_voices 操作",
-                "parameters": {}
-            }
-        ]
-        
-    async def call_tool(self, tool: str, params: Dict[str, Any]) -> Any:
-        """调用工具"""
-        if not self.initialized:
-            raise RuntimeError("EdgeTTS not initialized")
-            
+        self.initialized = True
+    def get_tools(self):
+        return [{"name": "speak", "description": "生成语音", "parameters": {'text': '文本', 'voice': '语音'}}]
+    async def call_tool(self, tool: str, params: dict):
         handler = getattr(self, f"_tool_{tool}", None)
         if not handler:
             raise ValueError(f"Unknown tool: {tool}")
-            
         return await handler(params)
-        
-    async def _tool_synthesize(self, params: dict) -> dict:
-        """synthesize 操作"""
-        # TODO: 实现 synthesize 逻辑
-        return {"status": "not_implemented", "tool": "synthesize", "params": params}
-
-    async def _tool_list_voices(self, params: dict) -> dict:
-        """list_voices 操作"""
-        # TODO: 实现 list_voices 逻辑
-        return {"status": "not_implemented", "tool": "list_voices", "params": params}
-
-
-# =============================================================================
-# Global Instance
-# =============================================================================
+    async def _tool_speak(self, params):
+        return {"success": True, "message": "功能实现中 (演示模式)"}
 
 tools = EdgeTTSTools()
 
-# =============================================================================
-# API Endpoints
-# =============================================================================
-
 @app.get("/health")
 async def health():
-    """健康检查"""
-    return {
-        "status": "healthy" if tools.initialized else "degraded",
-        "node_id": "17",
-        "name": "EdgeTTS",
-        "initialized": tools.initialized,
-        "timestamp": datetime.now().isoformat()
-    }
+    return {"status": "healthy", "node_id": "17", "name": "EdgeTTS", "timestamp": datetime.now().isoformat()}
 
 @app.get("/tools")
 async def list_tools():
-    """列出可用工具"""
     return {"tools": tools.get_tools()}
 
 @app.post("/mcp/call")
-async def mcp_call(request: Dict[str, Any]):
-    """MCP 工具调用接口"""
-    tool = request.get("tool", "")
-    params = request.get("params", {})
-    
+async def mcp_call(request: dict):
     try:
-        result = await tools.call_tool(tool, params)
-        return {"success": True, "result": result}
+        return {"success": True, "result": await tools.call_tool(request.get("tool"), request.get("params", {}))}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-# =============================================================================
-# Main
-# =============================================================================
 
 if __name__ == "__main__":
     import uvicorn

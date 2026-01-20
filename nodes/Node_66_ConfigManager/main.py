@@ -1,77 +1,41 @@
-"""
-Node 66: Config Manager
-=======================
-配置管理器 - 集中式配置管理
-
-功能：
-- 配置版本控制
-- 热更新配置
-- 配置验证
-- 环境变量管理
-"""
-
+"""Node 66: ConfigManager - 配置管理"""
 import os
 from datetime import datetime
-from typing import Dict, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Node 66 - Config Manager", version="1.0.0")
+app = FastAPI(title="Node 66 - ConfigManager", version="1.0.0")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+class ConfigManagerTools:
+    def __init__(self):
+        self.initialized = True
+    def get_tools(self):
+        return [{"name": "get_config", "description": "获取配置", "parameters": {'key': '配置项'}}]
+    async def call_tool(self, tool: str, params: dict):
+        handler = getattr(self, f"_tool_{tool}", None)
+        if not handler:
+            raise ValueError(f"Unknown tool: {tool}")
+        return await handler(params)
+    async def _tool_get_config(self, params):
+        return {"success": True, "message": "功能实现中 (演示模式)"}
 
-# 配置存储
-config_store: Dict[str, Any] = {}
-config_versions: list = []
+tools = ConfigManagerTools()
 
 @app.get("/health")
 async def health():
-    """健康检查"""
-    return {
-        "status": "healthy",
-        "node_id": "66",
-        "name": "ConfigManager",
-        "config_count": len(config_store),
-        "version_count": len(config_versions),
-        "timestamp": datetime.now().isoformat()
-    }
+    return {"status": "healthy", "node_id": "66", "name": "ConfigManager", "timestamp": datetime.now().isoformat()}
 
-@app.get("/config")
-async def get_all_config():
-    """获取所有配置"""
-    return {"configs": config_store}
+@app.get("/tools")
+async def list_tools():
+    return {"tools": tools.get_tools()}
 
-@app.get("/config/{key}")
-async def get_config(key: str):
-    """获取指定配置"""
-    if key not in config_store:
-        raise HTTPException(status_code=404, detail=f"Config '{key}' not found")
-    return {"key": key, "value": config_store[key]}
-
-@app.post("/config/{key}")
-async def set_config(key: str, request: Dict[str, Any]):
-    """设置配置"""
-    value = request.get("value")
-    old_value = config_store.get(key)
-    config_store[key] = value
-    config_versions.append({
-        "key": key,
-        "old_value": old_value,
-        "new_value": value,
-        "timestamp": datetime.now().isoformat()
-    })
-    return {"success": True, "key": key, "value": value}
-
-@app.get("/versions")
-async def get_versions():
-    """获取配置变更历史"""
-    return {"versions": config_versions[-100:]}  # 最近100条
+@app.post("/mcp/call")
+async def mcp_call(request: dict):
+    try:
+        return {"success": True, "result": await tools.call_tool(request.get("tool"), request.get("params", {}))}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

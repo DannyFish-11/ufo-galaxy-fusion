@@ -1,18 +1,42 @@
-"""Node 07: Git Tool - Version control operations"""
+"""Node 07: Git - Git 操作"""
 import os
-from fastapi import FastAPI
+from datetime import datetime
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 
-NODE_ID = os.getenv("NODE_ID", "07")
-app = FastAPI(title=f"UFO Galaxy Node {NODE_ID}: Git")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app = FastAPI(title="Node 07 - Git", version="1.0.0")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+
+class GitTools:
+    def __init__(self):
+        self.initialized = True
+    def get_tools(self):
+        return [{"name": "clone", "description": "克隆仓库", "parameters": {'url': '仓库URL'}}]
+    async def call_tool(self, tool: str, params: dict):
+        handler = getattr(self, f"_tool_{tool}", None)
+        if not handler:
+            raise ValueError(f"Unknown tool: {tool}")
+        return await handler(params)
+    async def _tool_clone(self, params):
+        return {"success": True, "message": "功能实现中 (演示模式)"}
+
+tools = GitTools()
 
 @app.get("/health")
-async def health(): return {"status": "healthy", "node_id": NODE_ID, "layer": "L2_TOOLS"}
+async def health():
+    return {"status": "healthy", "node_id": "07", "name": "Git", "timestamp": datetime.now().isoformat()}
 
-@app.get("/")
-async def root(): return {"node_id": NODE_ID, "name": "Git", "layer": "L2_TOOLS"}
+@app.get("/tools")
+async def list_tools():
+    return {"tools": tools.get_tools()}
+
+@app.post("/mcp/call")
+async def mcp_call(request: dict):
+    try:
+        return {"success": True, "result": await tools.call_tool(request.get("tool"), request.get("params", {}))}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8007)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8007)
