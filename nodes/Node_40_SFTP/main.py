@@ -1,79 +1,111 @@
-"""Node 40: SFTP - 文件传输"""
+"""
+Node 40: SFTP - 安全文件传输
+"""
 import os
-from datetime import datetime
 from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-app = FastAPI(title="Node 40 - SFTP", version="2.0.0")
+app = FastAPI(title="Node 40 - SFTP", version="3.0.0", description="Secure File Transfer Protocol")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-paramiko = None
 try:
-    import paramiko as _paramiko
-    paramiko = _paramiko
+    import paramiko
+    SFTP_AVAILABLE = True
 except ImportError:
-    pass
+    SFTP_AVAILABLE = False
 
 class SFTPRequest(BaseModel):
     host: str
+    port: int = 22
     username: str
     password: Optional[str] = None
-    key_path: Optional[str] = None
-    port: int = 22
+    key_file: Optional[str] = None
 
-class TransferRequest(SFTPRequest):
+class SFTPUploadRequest(SFTPRequest):
     local_path: str
     remote_path: str
 
+class SFTPDownloadRequest(SFTPRequest):
+    remote_path: str
+    local_path: str
+
 @app.get("/health")
 async def health():
-    return {"status": "healthy" if paramiko else "degraded", "node_id": "40", "name": "SFTP", "paramiko_available": paramiko is not None, "timestamp": datetime.now().isoformat()}
-
-def get_sftp(request: SFTPRequest):
-    if not paramiko:
-        raise HTTPException(status_code=503, detail="paramiko not installed")
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    if request.key_path:
-        key = paramiko.RSAKey.from_private_key_file(request.key_path)
-        client.connect(request.host, port=request.port, username=request.username, pkey=key)
-    else:
-        client.connect(request.host, port=request.port, username=request.username, password=request.password)
-    return client, client.open_sftp()
+    return {
+        "status": "healthy" if SFTP_AVAILABLE else "degraded",
+        "node_id": "40",
+        "name": "SFTP",
+        "paramiko_available": SFTP_AVAILABLE
+    }
 
 @app.post("/upload")
-async def upload(request: TransferRequest):
+async def upload_file(request: SFTPUploadRequest):
+    """上传文件到远程服务器"""
+    if not SFTP_AVAILABLE:
+        raise HTTPException(status_code=503, detail="paramiko not installed. Run: pip install paramiko")
+    
     try:
-        client, sftp = get_sftp(request)
+        transport = paramiko.Transport((request.host, request.port))
+        if request.key_file:
+            key = paramiko.RSAKey.from_private_key_file(request.key_file)
+            transport.connect(username=request.username, pkey=key)
+        else:
+            transport.connect(username=request.username, password=request.password)
+        
+        sftp = paramiko.SFTPClient.from_transport(transport)
         sftp.put(request.local_path, request.remote_path)
         sftp.close()
-        client.close()
-        return {"success": True, "action": "upload", "local": request.local_path, "remote": request.remote_path}
+        transport.close()
+        
+        return {"success": True, "message": f"Uploaded {request.local_path} to {request.remote_path}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/download")
-async def download(request: TransferRequest):
+async def download_file(request: SFTPDownloadRequest):
+    """从远程服务器下载文件"""
+    if not SFTP_AVAILABLE:
+        raise HTTPException(status_code=503, detail="paramiko not installed")
+    
     try:
-        client, sftp = get_sftp(request)
+        transport = paramiko.Transport((request.host, request.port))
+        if request.key_file:
+            key = paramiko.RSAKey.from_private_key_file(request.key_file)
+            transport.connect(username=request.username, pkey=key)
+        else:
+            transport.connect(username=request.username, password=request.password)
+        
+        sftp = paramiko.SFTPClient.from_transport(transport)
         sftp.get(request.remote_path, request.local_path)
         sftp.close()
-        client.close()
-        return {"success": True, "action": "download", "local": request.local_path, "remote": request.remote_path}
+        transport.close()
+        
+        return {"success": True, "message": f"Downloaded {request.remote_path} to {request.local_path}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/list")
-async def list_dir(request: SFTPRequest, path: str = "."):
+async def list_directory(request: SFTPRequest, remote_path: str = "/"):
+    """列出远程目录内容"""
+    if not SFTP_AVAILABLE:
+        raise HTTPException(status_code=503, detail="paramiko not installed")
+    
     try:
-        client, sftp = get_sftp(request)
-        files = sftp.listdir_attr(path)
-        result = [{"name": f.filename, "size": f.st_size, "is_dir": f.st_mode & 0o40000 != 0} for f in files]
+        transport = paramiko.Transport((request.host, request.port))
+        if request.key_file:
+            key = paramiko.RSAKey.from_private_key_file(request.key_file)
+            transport.connect(username=request.username, pkey=key)
+        else:
+            transport.connect(username=request.username, password=request.password)
+        
+        sftp = paramiko.SFTPClient.from_transport(transport)
+        files = sftp.listdir(remote_path)
         sftp.close()
-        client.close()
-        return {"success": True, "path": path, "files": result}
+        transport.close()
+        
+        return {"success": True, "files": files}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -81,9 +113,9 @@ async def list_dir(request: SFTPRequest, path: str = "."):
 async def mcp_call(request: dict):
     tool = request.get("tool", "")
     params = request.get("params", {})
-    if tool == "upload": return await upload(TransferRequest(**params))
-    elif tool == "download": return await download(TransferRequest(**params))
-    elif tool == "list": return await list_dir(SFTPRequest(**{k: v for k, v in params.items() if k != "path"}), params.get("path", "."))
+    if tool == "upload": return await upload_file(SFTPUploadRequest(**params))
+    elif tool == "download": return await download_file(SFTPDownloadRequest(**params))
+    elif tool == "list": return await list_directory(SFTPRequest(**params), params.get("remote_path", "/"))
     raise HTTPException(status_code=400, detail=f"Unknown tool: {tool}")
 
 if __name__ == "__main__":

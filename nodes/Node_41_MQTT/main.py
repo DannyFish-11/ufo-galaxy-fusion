@@ -1,49 +1,60 @@
-"""Node 41: MQTT - 消息队列"""
+"""
+Node 41: MQTT - 物联网消息队列
+"""
 import os, json
-from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-app = FastAPI(title="Node 41 - MQTT", version="2.0.0")
+app = FastAPI(title="Node 41 - MQTT", version="3.0.0", description="MQTT IoT Message Broker")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-paho_mqtt = None
 try:
     import paho.mqtt.client as mqtt
-    paho_mqtt = mqtt
+    MQTT_AVAILABLE = True
 except ImportError:
-    pass
+    MQTT_AVAILABLE = False
 
-MQTT_BROKER = os.getenv("MQTT_BROKER", "localhost")
-MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
-MQTT_USER = os.getenv("MQTT_USER", "")
-MQTT_PASS = os.getenv("MQTT_PASS", "")
-
-class PublishRequest(BaseModel):
+class MQTTPublishRequest(BaseModel):
+    broker: str
+    port: int = 1883
     topic: str
-    payload: Any
+    payload: str
     qos: int = 0
     retain: bool = False
+    username: Optional[str] = None
+    password: Optional[str] = None
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy" if paho_mqtt else "degraded", "node_id": "41", "name": "MQTT", "paho_available": paho_mqtt is not None, "timestamp": datetime.now().isoformat()}
+    return {
+        "status": "healthy" if MQTT_AVAILABLE else "degraded",
+        "node_id": "41",
+        "name": "MQTT",
+        "paho_mqtt_available": MQTT_AVAILABLE
+    }
 
 @app.post("/publish")
-async def publish(request: PublishRequest):
-    if not paho_mqtt:
+async def publish_message(request: MQTTPublishRequest):
+    """发布 MQTT 消息"""
+    if not MQTT_AVAILABLE:
         raise HTTPException(status_code=503, detail="paho-mqtt not installed. Run: pip install paho-mqtt")
+    
     try:
-        client = paho_mqtt.Client()
-        if MQTT_USER:
-            client.username_pw_set(MQTT_USER, MQTT_PASS)
-        client.connect(MQTT_BROKER, MQTT_PORT, 60)
-        payload = json.dumps(request.payload) if isinstance(request.payload, (dict, list)) else str(request.payload)
-        result = client.publish(request.topic, payload, qos=request.qos, retain=request.retain)
+        client = mqtt.Client()
+        if request.username and request.password:
+            client.username_pw_set(request.username, request.password)
+        
+        client.connect(request.broker, request.port, 60)
+        result = client.publish(request.topic, request.payload, qos=request.qos, retain=request.retain)
         client.disconnect()
-        return {"success": True, "topic": request.topic, "mid": result.mid}
+        
+        return {
+            "success": result.rc == 0,
+            "message_id": result.mid,
+            "topic": request.topic
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -51,7 +62,7 @@ async def publish(request: PublishRequest):
 async def mcp_call(request: dict):
     tool = request.get("tool", "")
     params = request.get("params", {})
-    if tool == "publish": return await publish(PublishRequest(**params))
+    if tool == "publish": return await publish_message(MQTTPublishRequest(**params))
     raise HTTPException(status_code=400, detail=f"Unknown tool: {tool}")
 
 if __name__ == "__main__":
