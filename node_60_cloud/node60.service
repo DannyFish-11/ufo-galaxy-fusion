@@ -1,0 +1,18 @@
+[Unit]
+Description=UFO³ Galaxy Node 60 - Heterogeneous Computing
+After=network.target tailscaled.service
+Wants=tailscaled.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/node_60_cloud
+EnvironmentFile=/home/ubuntu/node_60_cloud/.env
+ExecStart=/usr/bin/python3 /home/ubuntu/node_60_cloud/main.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
