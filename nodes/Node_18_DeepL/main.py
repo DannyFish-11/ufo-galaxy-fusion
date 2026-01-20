@@ -1,84 +1,86 @@
 """
-Node 18: DeepL - 翻译服务
+Node 18: DeepL - 专业翻译服务
 """
 import os, requests
-from datetime import datetime
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-app = FastAPI(title="Node 18 - DeepL", version="2.0.0")
+app = FastAPI(title="Node 18 - DeepL", version="3.0.0", description="DeepL Translation API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 DEEPL_API_KEY = os.getenv("DEEPL_API_KEY", "")
-DEEPL_API_URL = "https://api-free.deepl.com/v2"
+DEEPL_API_URL = "https://api-free.deepl.com/v2/translate"
 
 class TranslateRequest(BaseModel):
-    text: str
+    text: str | List[str]
     target_lang: str
     source_lang: Optional[str] = None
+    formality: Optional[str] = "default"
 
-class BatchTranslateRequest(BaseModel):
-    texts: List[str]
-    target_lang: str
-    source_lang: Optional[str] = None
+SUPPORTED_LANGUAGES = {
+    "ZH": "Chinese", "EN": "English", "DE": "German", "FR": "French",
+    "ES": "Spanish", "IT": "Italian", "JA": "Japanese", "KO": "Korean",
+    "RU": "Russian", "PT": "Portuguese", "NL": "Dutch", "PL": "Polish"
+}
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy" if DEEPL_API_KEY else "degraded", "node_id": "18", "name": "DeepL", "api_configured": bool(DEEPL_API_KEY), "timestamp": datetime.now().isoformat()}
+    return {
+        "status": "healthy" if DEEPL_API_KEY else "degraded",
+        "node_id": "18",
+        "name": "DeepL",
+        "api_key_configured": bool(DEEPL_API_KEY),
+        "supported_languages": len(SUPPORTED_LANGUAGES)
+    }
 
 @app.post("/translate")
 async def translate(request: TranslateRequest):
+    """翻译文本"""
     if not DEEPL_API_KEY:
-        # Fallback to free translation API
-        try:
-            response = requests.get(f"https://api.mymemory.translated.net/get", params={"q": request.text, "langpair": f"{request.source_lang or 'auto'}|{request.target_lang}"}, timeout=10)
-            data = response.json()
-            if data.get("responseStatus") == 200:
-                return {"success": True, "translated_text": data["responseData"]["translatedText"], "source": "mymemory"}
-        except:
-            pass
-        raise HTTPException(status_code=503, detail="DeepL API key not configured")
+        raise HTTPException(status_code=503, detail="DEEPL_API_KEY not configured")
+    
+    texts = [request.text] if isinstance(request.text, str) else request.text
+    
+    payload = {
+        "auth_key": DEEPL_API_KEY,
+        "text": texts,
+        "target_lang": request.target_lang.upper()
+    }
+    
+    if request.source_lang:
+        payload["source_lang"] = request.source_lang.upper()
+    if request.formality != "default":
+        payload["formality"] = request.formality
     
     try:
-        response = requests.post(f"{DEEPL_API_URL}/translate", headers={"Authorization": f"DeepL-Auth-Key {DEEPL_API_KEY}"}, data={"text": request.text, "target_lang": request.target_lang, "source_lang": request.source_lang} if request.source_lang else {"text": request.text, "target_lang": request.target_lang}, timeout=30)
+        response = requests.post(DEEPL_API_URL, data=payload, timeout=30)
+        response.raise_for_status()
+        result = response.json()
         
-        if response.status_code == 200:
-            data = response.json()
-            return {"success": True, "translated_text": data["translations"][0]["text"], "detected_source_lang": data["translations"][0].get("detected_source_language")}
-        else:
-            return {"success": False, "error": response.text}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-
-@app.post("/batch")
-async def batch_translate(request: BatchTranslateRequest):
-    results = []
-    for text in request.texts:
-        result = await translate(TranslateRequest(text=text, target_lang=request.target_lang, source_lang=request.source_lang))
-        results.append(result)
-    return {"success": True, "results": results}
+        translations = [t["text"] for t in result["translations"]]
+        detected_langs = [t.get("detected_source_language", "unknown") for t in result["translations"]]
+        
+        return {
+            "success": True,
+            "translations": translations if len(translations) > 1 else translations[0],
+            "detected_source_language": detected_langs[0] if detected_langs else "unknown",
+            "target_language": request.target_lang
+        }
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/languages")
 async def list_languages():
-    if not DEEPL_API_KEY:
-        return {"success": True, "languages": [{"code": "EN", "name": "English"}, {"code": "ZH", "name": "Chinese"}, {"code": "JA", "name": "Japanese"}, {"code": "DE", "name": "German"}, {"code": "FR", "name": "French"}]}
-    
-    try:
-        response = requests.get(f"{DEEPL_API_URL}/languages", headers={"Authorization": f"DeepL-Auth-Key {DEEPL_API_KEY}"}, timeout=10)
-        if response.status_code == 200:
-            return {"success": True, "languages": response.json()}
-    except:
-        pass
-    return {"success": False, "error": "Failed to fetch languages"}
+    """列出支持的语言"""
+    return {"success": True, "languages": SUPPORTED_LANGUAGES}
 
 @app.post("/mcp/call")
 async def mcp_call(request: dict):
     tool = request.get("tool", "")
     params = request.get("params", {})
     if tool == "translate": return await translate(TranslateRequest(**params))
-    elif tool == "batch": return await batch_translate(BatchTranslateRequest(**params))
     elif tool == "languages": return await list_languages()
     raise HTTPException(status_code=400, detail=f"Unknown tool: {tool}")
 
