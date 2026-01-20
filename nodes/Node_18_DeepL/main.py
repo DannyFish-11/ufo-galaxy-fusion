@@ -1,41 +1,56 @@
 """Node 18: DeepL - 翻译"""
-import os
+import os, requests
 from datetime import datetime
+from typing import Optional, List
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-app = FastAPI(title="Node 18 - DeepL", version="1.0.0")
+app = FastAPI(title="Node 18 - DeepL", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-class DeepLTools:
-    def __init__(self):
-        self.initialized = True
-    def get_tools(self):
-        return [{"name": "translate", "description": "翻译文本", "parameters": {'text': '文本', 'target_lang': '目标语言'}}]
-    async def call_tool(self, tool: str, params: dict):
-        handler = getattr(self, f"_tool_{tool}", None)
-        if not handler:
-            raise ValueError(f"Unknown tool: {tool}")
-        return await handler(params)
-    async def _tool_translate(self, params):
-        return {"success": True, "message": "功能实现中 (演示模式)"}
+DEEPL_API_KEY = os.getenv("DEEPL_API_KEY", "")
 
-tools = DeepLTools()
+class TranslateRequest(BaseModel):
+    text: str
+    target_lang: str = "EN"
+    source_lang: Optional[str] = None
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "node_id": "18", "name": "DeepL", "timestamp": datetime.now().isoformat()}
+    return {"status": "healthy" if DEEPL_API_KEY else "degraded", "node_id": "18", "name": "DeepL", "api_configured": bool(DEEPL_API_KEY), "timestamp": datetime.now().isoformat()}
 
-@app.get("/tools")
-async def list_tools():
-    return {"tools": tools.get_tools()}
+@app.post("/translate")
+async def translate(request: TranslateRequest):
+    if not DEEPL_API_KEY:
+        # 使用免费的 Google Translate 作为 fallback
+        try:
+            from googletrans import Translator
+            translator = Translator()
+            result = translator.translate(request.text, dest=request.target_lang.lower())
+            return {"success": True, "text": result.text, "source_lang": result.src, "target_lang": request.target_lang, "engine": "google"}
+        except:
+            raise HTTPException(status_code=503, detail="DeepL API not configured and Google Translate unavailable")
+    
+    try:
+        response = requests.post(
+            "https://api-free.deepl.com/v2/translate",
+            headers={"Authorization": f"DeepL-Auth-Key {DEEPL_API_KEY}"},
+            data={"text": request.text, "target_lang": request.target_lang, "source_lang": request.source_lang} if request.source_lang else {"text": request.text, "target_lang": request.target_lang},
+            timeout=30
+        )
+        response.raise_for_status()
+        data = response.json()
+        return {"success": True, "text": data["translations"][0]["text"], "source_lang": data["translations"][0]["detected_source_language"], "target_lang": request.target_lang, "engine": "deepl"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/mcp/call")
 async def mcp_call(request: dict):
-    try:
-        return {"success": True, "result": await tools.call_tool(request.get("tool"), request.get("params", {}))}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    tool = request.get("tool", "")
+    params = request.get("params", {})
+    if tool == "translate": return await translate(TranslateRequest(**params))
+    raise HTTPException(status_code=400, detail=f"Unknown tool: {tool}")
 
 if __name__ == "__main__":
     import uvicorn

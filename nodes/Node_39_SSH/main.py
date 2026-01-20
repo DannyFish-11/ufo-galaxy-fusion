@@ -1,41 +1,63 @@
-"""Node 39: SSH - SSH 客户端"""
+"""Node 39: SSH - 远程执行"""
 import os
 from datetime import datetime
+from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-app = FastAPI(title="Node 39 - SSH", version="1.0.0")
+app = FastAPI(title="Node 39 - SSH", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-class SSHTools:
-    def __init__(self):
-        self.initialized = True
-    def get_tools(self):
-        return [{"name": "execute", "description": "执行命令", "parameters": {'host': '主机', 'command': '命令'}}]
-    async def call_tool(self, tool: str, params: dict):
-        handler = getattr(self, f"_tool_{tool}", None)
-        if not handler:
-            raise ValueError(f"Unknown tool: {tool}")
-        return await handler(params)
-    async def _tool_execute(self, params):
-        return {"success": True, "message": "功能实现中 (演示模式)"}
+paramiko = None
+try:
+    import paramiko as _paramiko
+    paramiko = _paramiko
+except ImportError:
+    pass
 
-tools = SSHTools()
+class SSHRequest(BaseModel):
+    host: str
+    username: str
+    password: Optional[str] = None
+    key_path: Optional[str] = None
+    command: str
+    port: int = 22
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "node_id": "39", "name": "SSH", "timestamp": datetime.now().isoformat()}
+    return {"status": "healthy" if paramiko else "degraded", "node_id": "39", "name": "SSH", "paramiko_available": paramiko is not None, "timestamp": datetime.now().isoformat()}
 
-@app.get("/tools")
-async def list_tools():
-    return {"tools": tools.get_tools()}
+@app.post("/execute")
+async def execute(request: SSHRequest):
+    if not paramiko:
+        raise HTTPException(status_code=503, detail="paramiko not installed. Run: pip install paramiko")
+    try:
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        if request.key_path:
+            key = paramiko.RSAKey.from_private_key_file(request.key_path)
+            client.connect(request.host, port=request.port, username=request.username, pkey=key)
+        else:
+            client.connect(request.host, port=request.port, username=request.username, password=request.password)
+        
+        stdin, stdout, stderr = client.exec_command(request.command)
+        output = stdout.read().decode()
+        error = stderr.read().decode()
+        exit_code = stdout.channel.recv_exit_status()
+        client.close()
+        
+        return {"success": True, "output": output, "error": error, "exit_code": exit_code}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/mcp/call")
 async def mcp_call(request: dict):
-    try:
-        return {"success": True, "result": await tools.call_tool(request.get("tool"), request.get("params", {}))}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    tool = request.get("tool", "")
+    params = request.get("params", {})
+    if tool == "execute": return await execute(SSHRequest(**params))
+    raise HTTPException(status_code=400, detail=f"Unknown tool: {tool}")
 
 if __name__ == "__main__":
     import uvicorn

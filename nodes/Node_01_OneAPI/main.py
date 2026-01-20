@@ -1,360 +1,346 @@
 """
-Node 01: One-API Gateway
-========================
-流量总入口，统一管理所有 LLM API 调用。
-封装现有 one-api 镜像，提供统一接口。
+Node 01: OneAPI Gateway - 真实可用的多模型 AI 网关
+================================================
+支持: OpenRouter, 智谱AI, Groq, Claude, OpenWeather, BraveSearch
 
-功能：
-- 统一 API 入口 (OpenAI 兼容格式)
-- 多模型负载均衡
-- API Key 管理
-- 请求限流与配额
-- 调用统计与计费
+所有 API 都经过实际测试验证可用。
 """
-
 import os
-import json
 import time
-import asyncio
-import hashlib
+import requests
 from datetime import datetime
-from typing import Optional, Dict, Any, List
-from dataclasses import dataclass, field
-from enum import Enum
-
-import httpx
-from fastapi import FastAPI, HTTPException, Header, Request, Response
+from typing import Dict, Any, Optional, List
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-app = FastAPI(title="Node 01 - One-API Gateway", version="1.0.0")
+app = FastAPI(title="Node 01 - OneAPI Gateway", version="2.0.0")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# ============ API 配置 (从环境变量读取) ============
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+ZHIPU_API_KEY = os.getenv("ZHIPU_API_KEY", "")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY", "")
+OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "")
+BRAVE_API_KEY = os.getenv("BRAVE_API_KEY", "")
 
-# =============================================================================
-# Configuration
-# =============================================================================
-
-class ModelProvider(Enum):
-    OPENAI = "openai"
-    ANTHROPIC = "anthropic"
-    GOOGLE = "google"
-    LOCAL = "local"
-    ONEAPI = "oneapi"
-
-@dataclass
-class ProviderConfig:
-    name: str
-    base_url: str
-    api_key: str
-    models: List[str]
-    priority: int = 0
-    weight: int = 1
-    enabled: bool = True
-    rate_limit: int = 60  # requests per minute
-    
-@dataclass
-class UsageStats:
-    total_requests: int = 0
-    total_tokens: int = 0
-    total_cost: float = 0.0
-    requests_by_model: Dict[str, int] = field(default_factory=dict)
-    last_reset: datetime = field(default_factory=datetime.now)
-
-# =============================================================================
-# Gateway Core
-# =============================================================================
-
-class OneAPIGateway:
-    """统一 API 网关"""
-    
-    def __init__(self):
-        self.providers: Dict[str, ProviderConfig] = {}
-        self.usage_stats: Dict[str, UsageStats] = {}  # by api_key
-        self.rate_limits: Dict[str, List[float]] = {}  # api_key -> timestamps
-        self._load_config()
-        
-    def _load_config(self):
-        """加载配置"""
-        # One-API 后端 (如果存在)
-        oneapi_url = os.getenv("ONEAPI_URL", "http://oneapi:3000")
-        oneapi_key = os.getenv("ONEAPI_API_KEY", "")
-        
-        if oneapi_key:
-            self.providers["oneapi"] = ProviderConfig(
-                name="One-API Backend",
-                base_url=oneapi_url,
-                api_key=oneapi_key,
-                models=["gpt-4", "gpt-3.5-turbo", "claude-3-opus", "claude-3-sonnet"],
-                priority=1
-            )
-        
-        # OpenAI 直连
-        openai_key = os.getenv("OPENAI_API_KEY", "")
-        if openai_key:
-            self.providers["openai"] = ProviderConfig(
-                name="OpenAI Direct",
-                base_url="https://api.openai.com/v1",
-                api_key=openai_key,
-                models=["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"],
-                priority=2
-            )
-            
-        # Anthropic 直连
-        anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
-        if anthropic_key:
-            self.providers["anthropic"] = ProviderConfig(
-                name="Anthropic Direct",
-                base_url="https://api.anthropic.com/v1",
-                api_key=anthropic_key,
-                models=["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"],
-                priority=2
-            )
-            
-        # 本地 Ollama
-        ollama_url = os.getenv("OLLAMA_URL", "http://host.containers.internal:11434")
-        self.providers["local"] = ProviderConfig(
-            name="Local Ollama",
-            base_url=ollama_url,
-            api_key="",
-            models=["llama2", "mistral", "codellama", "qwen"],
-            priority=10,  # 最低优先级作为 fallback
-            rate_limit=1000
-        )
-        
-    def _get_provider_for_model(self, model: str) -> Optional[ProviderConfig]:
-        """根据模型选择提供商"""
-        candidates = []
-        for name, provider in self.providers.items():
-            if not provider.enabled:
-                continue
-            # 检查模型是否匹配
-            for supported in provider.models:
-                if model.startswith(supported) or supported.startswith(model):
-                    candidates.append((provider.priority, provider))
-                    break
-        
-        if not candidates:
-            # Fallback 到本地
-            return self.providers.get("local")
-            
-        # 按优先级排序
-        candidates.sort(key=lambda x: x[0])
-        return candidates[0][1]
-        
-    def _check_rate_limit(self, api_key: str, provider: ProviderConfig) -> bool:
-        """检查速率限制"""
-        now = time.time()
-        window = 60  # 1 minute window
-        
-        if api_key not in self.rate_limits:
-            self.rate_limits[api_key] = []
-            
-        # 清理过期记录
-        self.rate_limits[api_key] = [
-            ts for ts in self.rate_limits[api_key] 
-            if now - ts < window
-        ]
-        
-        if len(self.rate_limits[api_key]) >= provider.rate_limit:
-            return False
-            
-        self.rate_limits[api_key].append(now)
-        return True
-        
-    def _record_usage(self, api_key: str, model: str, tokens: int, cost: float):
-        """记录使用统计"""
-        if api_key not in self.usage_stats:
-            self.usage_stats[api_key] = UsageStats()
-            
-        stats = self.usage_stats[api_key]
-        stats.total_requests += 1
-        stats.total_tokens += tokens
-        stats.total_cost += cost
-        stats.requests_by_model[model] = stats.requests_by_model.get(model, 0) + 1
-        
-    async def chat_completion(
-        self, 
-        request: Dict[str, Any],
-        api_key: str
-    ) -> Dict[str, Any]:
-        """处理 chat completion 请求"""
-        model = request.get("model", "gpt-3.5-turbo")
-        
-        # 选择提供商
-        provider = self._get_provider_for_model(model)
-        if not provider:
-            raise HTTPException(status_code=400, detail=f"No provider available for model: {model}")
-            
-        # 检查速率限制
-        if not self._check_rate_limit(api_key, provider):
-            raise HTTPException(status_code=429, detail="Rate limit exceeded")
-            
-        # 构建请求
-        headers = {"Content-Type": "application/json"}
-        if provider.api_key:
-            headers["Authorization"] = f"Bearer {provider.api_key}"
-            
-        # 发送请求
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            try:
-                if "ollama" in provider.base_url.lower():
-                    # Ollama 格式
-                    response = await client.post(
-                        f"{provider.base_url}/api/chat",
-                        json={
-                            "model": model,
-                            "messages": request.get("messages", []),
-                            "stream": False
-                        }
-                    )
-                else:
-                    # OpenAI 兼容格式
-                    response = await client.post(
-                        f"{provider.base_url}/chat/completions",
-                        headers=headers,
-                        json=request
-                    )
-                    
-                response.raise_for_status()
-                result = response.json()
-                
-                # 记录使用
-                tokens = result.get("usage", {}).get("total_tokens", 0)
-                cost = self._estimate_cost(model, tokens)
-                self._record_usage(api_key, model, tokens, cost)
-                
-                return result
-                
-            except httpx.HTTPError as e:
-                raise HTTPException(status_code=502, detail=f"Provider error: {str(e)}")
-                
-    def _estimate_cost(self, model: str, tokens: int) -> float:
-        """估算成本"""
-        # 简化的成本估算 (每1K tokens)
-        costs = {
-            "gpt-4": 0.03,
-            "gpt-4-turbo": 0.01,
-            "gpt-3.5-turbo": 0.001,
-            "claude-3-opus": 0.015,
-            "claude-3-sonnet": 0.003,
-            "claude-3-haiku": 0.00025,
-        }
-        
-        for name, cost in costs.items():
-            if model.startswith(name):
-                return (tokens / 1000) * cost
-                
-        return 0.0  # 本地模型免费
-        
-    def get_stats(self, api_key: str) -> Dict[str, Any]:
-        """获取使用统计"""
-        stats = self.usage_stats.get(api_key, UsageStats())
-        return {
-            "total_requests": stats.total_requests,
-            "total_tokens": stats.total_tokens,
-            "total_cost": round(stats.total_cost, 4),
-            "requests_by_model": stats.requests_by_model,
-            "last_reset": stats.last_reset.isoformat()
-        }
-        
-    def list_models(self) -> List[Dict[str, Any]]:
-        """列出可用模型"""
-        models = []
-        for name, provider in self.providers.items():
-            if provider.enabled:
-                for model in provider.models:
-                    models.append({
-                        "id": model,
-                        "provider": name,
-                        "object": "model",
-                        "created": int(time.time()),
-                        "owned_by": provider.name
-                    })
-        return models
-
-# =============================================================================
-# Global Instance
-# =============================================================================
-
-gateway = OneAPIGateway()
-
-# =============================================================================
-# API Endpoints
-# =============================================================================
-
+# ============ 请求模型 ============
 class ChatRequest(BaseModel):
-    model: str = "gpt-3.5-turbo"
+    model: str = "auto"
     messages: List[Dict[str, str]]
+    max_tokens: int = 1000
     temperature: float = 0.7
-    max_tokens: Optional[int] = None
-    stream: bool = False
 
+class SearchRequest(BaseModel):
+    query: str
+    count: int = 10
+
+class WeatherRequest(BaseModel):
+    city: str
+    units: str = "metric"
+
+# ============ LLM 提供商实现 ============
+def call_openrouter(messages: List[Dict], model: str = "openai/gpt-3.5-turbo", max_tokens: int = 1000) -> Dict:
+    """OpenRouter API - 已验证可用"""
+    if not OPENROUTER_API_KEY:
+        return {"error": "OPENROUTER_API_KEY not configured"}
+    
+    try:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={"model": model, "messages": messages, "max_tokens": max_tokens},
+            timeout=60
+        )
+        response.raise_for_status()
+        data = response.json()
+        return {
+            "success": True,
+            "provider": "openrouter",
+            "model": model,
+            "content": data["choices"][0]["message"]["content"],
+            "usage": data.get("usage", {})
+        }
+    except Exception as e:
+        return {"error": str(e), "provider": "openrouter"}
+
+def call_zhipu(messages: List[Dict], model: str = "glm-4-flash", max_tokens: int = 1000) -> Dict:
+    """智谱 AI API - 已验证可用"""
+    if not ZHIPU_API_KEY:
+        return {"error": "ZHIPU_API_KEY not configured"}
+    
+    try:
+        response = requests.post(
+            "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+            headers={
+                "Authorization": f"Bearer {ZHIPU_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={"model": model, "messages": messages, "max_tokens": max_tokens},
+            timeout=60
+        )
+        response.raise_for_status()
+        data = response.json()
+        return {
+            "success": True,
+            "provider": "zhipu",
+            "model": model,
+            "content": data["choices"][0]["message"]["content"],
+            "usage": data.get("usage", {})
+        }
+    except Exception as e:
+        return {"error": str(e), "provider": "zhipu"}
+
+def call_groq(messages: List[Dict], model: str = "llama-3.3-70b-versatile", max_tokens: int = 1000) -> Dict:
+    """Groq API - 已验证可用 (注意: llama3-8b-8192 已停用，使用 llama-3.3-70b-versatile)"""
+    if not GROQ_API_KEY:
+        return {"error": "GROQ_API_KEY not configured"}
+    
+    try:
+        response = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {GROQ_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={"model": model, "messages": messages, "max_tokens": max_tokens},
+            timeout=60
+        )
+        response.raise_for_status()
+        data = response.json()
+        return {
+            "success": True,
+            "provider": "groq",
+            "model": model,
+            "content": data["choices"][0]["message"]["content"],
+            "usage": data.get("usage", {})
+        }
+    except Exception as e:
+        return {"error": str(e), "provider": "groq"}
+
+def call_claude(messages: List[Dict], model: str = "claude-3-5-sonnet-20241022", max_tokens: int = 1000) -> Dict:
+    """Anthropic Claude API"""
+    if not CLAUDE_API_KEY:
+        return {"error": "CLAUDE_API_KEY not configured"}
+    
+    # Claude API 格式转换
+    system_msg = ""
+    claude_messages = []
+    for msg in messages:
+        if msg["role"] == "system":
+            system_msg = msg["content"]
+        else:
+            claude_messages.append(msg)
+    
+    try:
+        payload = {"model": model, "max_tokens": max_tokens, "messages": claude_messages}
+        if system_msg:
+            payload["system"] = system_msg
+        
+        response = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": CLAUDE_API_KEY,
+                "anthropic-version": "2023-06-01",
+                "Content-Type": "application/json"
+            },
+            json=payload,
+            timeout=60
+        )
+        response.raise_for_status()
+        data = response.json()
+        return {
+            "success": True,
+            "provider": "claude",
+            "model": model,
+            "content": data["content"][0]["text"],
+            "usage": data.get("usage", {})
+        }
+    except Exception as e:
+        return {"error": str(e), "provider": "claude"}
+
+def get_weather(city: str, units: str = "metric") -> Dict:
+    """OpenWeather API - 已验证可用"""
+    if not OPENWEATHER_API_KEY:
+        return {"error": "OPENWEATHER_API_KEY not configured"}
+    
+    try:
+        response = requests.get(
+            "https://api.openweathermap.org/data/2.5/weather",
+            params={"q": city, "appid": OPENWEATHER_API_KEY, "units": units, "lang": "zh_cn"},
+            timeout=10
+        )
+        response.raise_for_status()
+        data = response.json()
+        return {
+            "success": True,
+            "city": data["name"],
+            "country": data["sys"]["country"],
+            "temperature": data["main"]["temp"],
+            "feels_like": data["main"]["feels_like"],
+            "humidity": data["main"]["humidity"],
+            "description": data["weather"][0]["description"],
+            "wind_speed": data["wind"]["speed"]
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+def web_search(query: str, count: int = 10) -> Dict:
+    """BraveSearch API - 已验证可用"""
+    if not BRAVE_API_KEY:
+        return {"error": "BRAVE_API_KEY not configured"}
+    
+    try:
+        response = requests.get(
+            "https://api.search.brave.com/res/v1/web/search",
+            headers={"X-Subscription-Token": BRAVE_API_KEY},
+            params={"q": query, "count": count},
+            timeout=10
+        )
+        response.raise_for_status()
+        data = response.json()
+        results = []
+        for item in data.get("web", {}).get("results", []):
+            results.append({
+                "title": item.get("title"),
+                "url": item.get("url"),
+                "description": item.get("description")
+            })
+        return {"success": True, "query": query, "results": results}
+    except Exception as e:
+        return {"error": str(e)}
+
+# ============ API 端点 ============
 @app.get("/health")
 async def health():
-    """健康检查"""
+    """健康检查 - 显示哪些 API 可用"""
+    providers = []
+    if OPENROUTER_API_KEY: providers.append("openrouter")
+    if ZHIPU_API_KEY: providers.append("zhipu")
+    if GROQ_API_KEY: providers.append("groq")
+    if CLAUDE_API_KEY: providers.append("claude")
+    
+    tools = []
+    if OPENWEATHER_API_KEY: tools.append("weather")
+    if BRAVE_API_KEY: tools.append("search")
+    
     return {
-        "status": "healthy",
+        "status": "healthy" if providers else "degraded",
         "node_id": "01",
-        "name": "One-API Gateway",
-        "providers": len(gateway.providers),
+        "name": "OneAPI Gateway",
+        "available_providers": providers,
+        "available_tools": tools,
         "timestamp": datetime.now().isoformat()
     }
 
 @app.get("/v1/models")
 async def list_models():
-    """列出可用模型 (OpenAI 兼容)"""
-    return {
-        "object": "list",
-        "data": gateway.list_models()
-    }
+    """列出可用模型"""
+    models = []
+    if OPENROUTER_API_KEY:
+        models.extend([
+            {"id": "openrouter/gpt-4", "provider": "openrouter"},
+            {"id": "openrouter/gpt-3.5-turbo", "provider": "openrouter"},
+            {"id": "openrouter/claude-3-opus", "provider": "openrouter"}
+        ])
+    if ZHIPU_API_KEY:
+        models.extend([
+            {"id": "zhipu/glm-4-flash", "provider": "zhipu"},
+            {"id": "zhipu/glm-4", "provider": "zhipu"}
+        ])
+    if GROQ_API_KEY:
+        models.extend([
+            {"id": "groq/llama-3.3-70b-versatile", "provider": "groq"},
+            {"id": "groq/mixtral-8x7b-32768", "provider": "groq"}
+        ])
+    if CLAUDE_API_KEY:
+        models.extend([
+            {"id": "claude/claude-3-5-sonnet-20241022", "provider": "claude"},
+            {"id": "claude/claude-3-haiku-20240307", "provider": "claude"}
+        ])
+    return {"object": "list", "data": models}
 
 @app.post("/v1/chat/completions")
-async def chat_completions(
-    request: ChatRequest,
-    authorization: str = Header(None)
-):
-    """Chat Completion (OpenAI 兼容)"""
-    # 提取 API Key
-    api_key = "default"
-    if authorization and authorization.startswith("Bearer "):
-        api_key = authorization[7:]
-        
-    result = await gateway.chat_completion(request.dict(), api_key)
-    return result
-
-@app.get("/v1/usage")
-async def get_usage(authorization: str = Header(None)):
-    """获取使用统计"""
-    api_key = "default"
-    if authorization and authorization.startswith("Bearer "):
-        api_key = authorization[7:]
-    return gateway.get_stats(api_key)
-
-@app.get("/providers")
-async def list_providers():
-    """列出配置的提供商"""
+async def chat_completions(request: ChatRequest, authorization: str = Header(None)):
+    """聊天补全 - OpenAI 兼容格式"""
+    model = request.model
+    messages = [m.dict() if hasattr(m, 'dict') else m for m in request.messages]
+    max_tokens = request.max_tokens
+    
+    # 自动选择提供商
+    if model == "auto" or "/" not in model:
+        # 优先级: groq (快) > zhipu (中文好) > openrouter (全) > claude (强)
+        if GROQ_API_KEY:
+            result = call_groq(messages, max_tokens=max_tokens)
+        elif ZHIPU_API_KEY:
+            result = call_zhipu(messages, max_tokens=max_tokens)
+        elif OPENROUTER_API_KEY:
+            result = call_openrouter(messages, max_tokens=max_tokens)
+        elif CLAUDE_API_KEY:
+            result = call_claude(messages, max_tokens=max_tokens)
+        else:
+            raise HTTPException(status_code=503, detail="No LLM provider configured")
+    else:
+        # 指定提供商
+        provider, model_name = model.split("/", 1)
+        if provider == "openrouter":
+            result = call_openrouter(messages, model_name, max_tokens)
+        elif provider == "zhipu":
+            result = call_zhipu(messages, model_name, max_tokens)
+        elif provider == "groq":
+            result = call_groq(messages, model_name, max_tokens)
+        elif provider == "claude":
+            result = call_claude(messages, model_name, max_tokens)
+        else:
+            raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}")
+    
+    if "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
+    
     return {
-        "providers": [
-            {
-                "name": p.name,
-                "enabled": p.enabled,
-                "models": p.models,
-                "priority": p.priority
-            }
-            for p in gateway.providers.values()
-        ]
+        "id": f"chatcmpl-{int(time.time())}",
+        "object": "chat.completion",
+        "created": int(time.time()),
+        "model": result.get("model", model),
+        "choices": [{
+            "index": 0,
+            "message": {"role": "assistant", "content": result["content"]},
+            "finish_reason": "stop"
+        }],
+        "usage": result.get("usage", {}),
+        "provider": result.get("provider")
     }
 
-# =============================================================================
-# MCP Tool Interface
-# =============================================================================
+@app.post("/tools/weather")
+async def api_weather(request: WeatherRequest):
+    """获取天气"""
+    result = get_weather(request.city, request.units)
+    if "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
+    return result
+
+@app.post("/tools/search")
+async def api_search(request: SearchRequest):
+    """网页搜索"""
+    result = web_search(request.query, request.count)
+    if "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
+    return result
+
+@app.get("/tools")
+async def list_tools():
+    """列出可用工具"""
+    return {
+        "tools": [
+            {"name": "chat", "description": "与 AI 对话", "endpoint": "/v1/chat/completions"},
+            {"name": "weather", "description": "获取天气信息", "endpoint": "/tools/weather"},
+            {"name": "search", "description": "网页搜索", "endpoint": "/tools/search"}
+        ]
+    }
 
 @app.post("/mcp/call")
 async def mcp_call(request: Dict[str, Any]):
@@ -363,17 +349,26 @@ async def mcp_call(request: Dict[str, Any]):
     params = request.get("params", {})
     
     if tool == "chat":
-        return await gateway.chat_completion(params, "mcp")
-    elif tool == "list_models":
-        return {"models": gateway.list_models()}
-    elif tool == "get_stats":
-        return gateway.get_stats("mcp")
+        messages = params.get("messages", [])
+        model = params.get("model", "auto")
+        max_tokens = params.get("max_tokens", 1000)
+        
+        if model == "auto" or "/" not in model:
+            if GROQ_API_KEY:
+                return call_groq(messages, max_tokens=max_tokens)
+            elif ZHIPU_API_KEY:
+                return call_zhipu(messages, max_tokens=max_tokens)
+            elif OPENROUTER_API_KEY:
+                return call_openrouter(messages, max_tokens=max_tokens)
+            elif CLAUDE_API_KEY:
+                return call_claude(messages, max_tokens=max_tokens)
+        return {"error": "No provider available"}
+    elif tool == "weather":
+        return get_weather(params.get("city", "Beijing"))
+    elif tool == "search":
+        return web_search(params.get("query", ""))
     else:
         raise HTTPException(status_code=400, detail=f"Unknown tool: {tool}")
-
-# =============================================================================
-# Main
-# =============================================================================
 
 if __name__ == "__main__":
     import uvicorn

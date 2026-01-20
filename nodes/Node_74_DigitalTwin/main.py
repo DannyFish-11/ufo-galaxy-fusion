@@ -1,41 +1,121 @@
 """Node 74: DigitalTwin - 数字孪生"""
-import os
+import os, json
 from datetime import datetime
+from typing import Optional, Dict, Any, List
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-app = FastAPI(title="Node 74 - DigitalTwin", version="1.0.0")
+app = FastAPI(title="Node 74 - DigitalTwin", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-class DigitalTwinTools:
-    def __init__(self):
-        self.initialized = True
-    def get_tools(self):
-        return [{"name": "sync_state", "description": "同步状态", "parameters": {'entity_id': '实体ID'}}]
-    async def call_tool(self, tool: str, params: dict):
-        handler = getattr(self, f"_tool_{tool}", None)
-        if not handler:
-            raise ValueError(f"Unknown tool: {tool}")
-        return await handler(params)
-    async def _tool_sync_state(self, params):
-        return {"success": True, "message": "功能实现中 (演示模式)"}
+# 数字孪生状态存储
+twins: Dict[str, Dict] = {}
 
-tools = DigitalTwinTools()
+class TwinCreateRequest(BaseModel):
+    twin_id: str
+    name: str
+    type: str  # device, environment, process
+    properties: Dict[str, Any]
+    metadata: Optional[Dict[str, Any]] = None
+
+class TwinUpdateRequest(BaseModel):
+    twin_id: str
+    properties: Dict[str, Any]
+
+class SimulateRequest(BaseModel):
+    twin_id: str
+    scenario: str
+    parameters: Optional[Dict[str, Any]] = None
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "node_id": "74", "name": "DigitalTwin", "timestamp": datetime.now().isoformat()}
+    return {"status": "healthy", "node_id": "74", "name": "DigitalTwin", "twin_count": len(twins), "timestamp": datetime.now().isoformat()}
 
-@app.get("/tools")
-async def list_tools():
-    return {"tools": tools.get_tools()}
+@app.post("/create")
+async def create_twin(request: TwinCreateRequest):
+    if request.twin_id in twins:
+        raise HTTPException(status_code=400, detail="Twin already exists")
+    twins[request.twin_id] = {
+        "id": request.twin_id,
+        "name": request.name,
+        "type": request.type,
+        "properties": request.properties,
+        "metadata": request.metadata or {},
+        "history": [],
+        "created_at": datetime.now().isoformat(),
+        "updated_at": datetime.now().isoformat()
+    }
+    return {"success": True, "twin_id": request.twin_id}
+
+@app.post("/update")
+async def update_twin(request: TwinUpdateRequest):
+    if request.twin_id not in twins:
+        raise HTTPException(status_code=404, detail="Twin not found")
+    
+    twin = twins[request.twin_id]
+    # 记录历史
+    twin["history"].append({"properties": twin["properties"].copy(), "timestamp": twin["updated_at"]})
+    if len(twin["history"]) > 100:
+        twin["history"] = twin["history"][-100:]
+    
+    twin["properties"].update(request.properties)
+    twin["updated_at"] = datetime.now().isoformat()
+    return {"success": True, "twin_id": request.twin_id, "properties": twin["properties"]}
+
+@app.get("/get/{twin_id}")
+async def get_twin(twin_id: str):
+    if twin_id not in twins:
+        raise HTTPException(status_code=404, detail="Twin not found")
+    return {"success": True, "twin": twins[twin_id]}
+
+@app.get("/list")
+async def list_twins():
+    return {"success": True, "twins": [{"id": t["id"], "name": t["name"], "type": t["type"]} for t in twins.values()]}
+
+@app.post("/simulate")
+async def simulate(request: SimulateRequest):
+    if request.twin_id not in twins:
+        raise HTTPException(status_code=404, detail="Twin not found")
+    
+    twin = twins[request.twin_id]
+    params = request.parameters or {}
+    
+    # 简单模拟逻辑
+    result = {"scenario": request.scenario, "twin_id": request.twin_id, "initial_state": twin["properties"].copy()}
+    
+    if request.scenario == "temperature_change":
+        delta = params.get("delta", 5)
+        if "temperature" in twin["properties"]:
+            result["predicted_temperature"] = twin["properties"]["temperature"] + delta
+    elif request.scenario == "load_test":
+        load = params.get("load", 100)
+        result["predicted_response_time"] = load * 0.01
+        result["predicted_success_rate"] = max(0, 100 - load * 0.1)
+    else:
+        result["message"] = f"Simulation for scenario '{request.scenario}' completed"
+    
+    result["timestamp"] = datetime.now().isoformat()
+    return {"success": True, "result": result}
+
+@app.delete("/delete/{twin_id}")
+async def delete_twin(twin_id: str):
+    if twin_id not in twins:
+        raise HTTPException(status_code=404, detail="Twin not found")
+    del twins[twin_id]
+    return {"success": True, "twin_id": twin_id}
 
 @app.post("/mcp/call")
 async def mcp_call(request: dict):
-    try:
-        return {"success": True, "result": await tools.call_tool(request.get("tool"), request.get("params", {}))}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    tool = request.get("tool", "")
+    params = request.get("params", {})
+    if tool == "create": return await create_twin(TwinCreateRequest(**params))
+    elif tool == "update": return await update_twin(TwinUpdateRequest(**params))
+    elif tool == "get": return await get_twin(params.get("twin_id"))
+    elif tool == "list": return await list_twins()
+    elif tool == "simulate": return await simulate(SimulateRequest(**params))
+    elif tool == "delete": return await delete_twin(params.get("twin_id"))
+    raise HTTPException(status_code=400, detail=f"Unknown tool: {tool}")
 
 if __name__ == "__main__":
     import uvicorn

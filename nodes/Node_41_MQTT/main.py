@@ -1,41 +1,58 @@
-"""Node 41: MQTT - MQTT 客户端"""
-import os
+"""Node 41: MQTT - 消息队列"""
+import os, json
 from datetime import datetime
+from typing import Optional, Dict, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-app = FastAPI(title="Node 41 - MQTT", version="1.0.0")
+app = FastAPI(title="Node 41 - MQTT", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-class MQTTTools:
-    def __init__(self):
-        self.initialized = True
-    def get_tools(self):
-        return [{"name": "publish", "description": "发布消息", "parameters": {'topic': '主题', 'message': '消息'}}]
-    async def call_tool(self, tool: str, params: dict):
-        handler = getattr(self, f"_tool_{tool}", None)
-        if not handler:
-            raise ValueError(f"Unknown tool: {tool}")
-        return await handler(params)
-    async def _tool_publish(self, params):
-        return {"success": True, "message": "功能实现中 (演示模式)"}
+paho_mqtt = None
+try:
+    import paho.mqtt.client as mqtt
+    paho_mqtt = mqtt
+except ImportError:
+    pass
 
-tools = MQTTTools()
+MQTT_BROKER = os.getenv("MQTT_BROKER", "localhost")
+MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
+MQTT_USER = os.getenv("MQTT_USER", "")
+MQTT_PASS = os.getenv("MQTT_PASS", "")
+
+class PublishRequest(BaseModel):
+    topic: str
+    payload: Any
+    qos: int = 0
+    retain: bool = False
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "node_id": "41", "name": "MQTT", "timestamp": datetime.now().isoformat()}
+    return {"status": "healthy" if paho_mqtt else "degraded", "node_id": "41", "name": "MQTT", "paho_available": paho_mqtt is not None, "timestamp": datetime.now().isoformat()}
 
-@app.get("/tools")
-async def list_tools():
-    return {"tools": tools.get_tools()}
+@app.post("/publish")
+async def publish(request: PublishRequest):
+    if not paho_mqtt:
+        raise HTTPException(status_code=503, detail="paho-mqtt not installed. Run: pip install paho-mqtt")
+    try:
+        client = paho_mqtt.Client()
+        if MQTT_USER:
+            client.username_pw_set(MQTT_USER, MQTT_PASS)
+        client.connect(MQTT_BROKER, MQTT_PORT, 60)
+        payload = json.dumps(request.payload) if isinstance(request.payload, (dict, list)) else str(request.payload)
+        result = client.publish(request.topic, payload, qos=request.qos, retain=request.retain)
+        client.disconnect()
+        return {"success": True, "topic": request.topic, "mid": result.mid}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/mcp/call")
 async def mcp_call(request: dict):
-    try:
-        return {"success": True, "result": await tools.call_tool(request.get("tool"), request.get("params", {}))}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    tool = request.get("tool", "")
+    params = request.get("params", {})
+    if tool == "publish": return await publish(PublishRequest(**params))
+    raise HTTPException(status_code=400, detail=f"Unknown tool: {tool}")
 
 if __name__ == "__main__":
     import uvicorn

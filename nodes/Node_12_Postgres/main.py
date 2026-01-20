@@ -1,68 +1,65 @@
-"""
-Node 12: Postgres
-====================
-PostgreSQL 数据库
-"""
-
+"""Node 12: Postgres - 数据库操作"""
 import os
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-app = FastAPI(title="Node 12 - Postgres", version="1.0.0")
+app = FastAPI(title="Node 12 - Postgres", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-class PostgresTools:
-    def __init__(self):
-        
-        # 需要 psycopg2 库
-        import psycopg2
-        self.conn_string = os.getenv("POSTGRES_CONN", "")
-        
-    async def _tool_query(self, params):
-        try:
-            conn = psycopg2.connect(self.conn_string)
-            cur = conn.cursor()
-            cur.execute(params.get("sql", ""))
-            results = cur.fetchall()
-            conn.close()
-            return {"success": True, "results": results}
-        except Exception as e:
-            return {"error": str(e)}
+psycopg2 = None
+try:
+    import psycopg2 as _psycopg2
+    from psycopg2.extras import RealDictCursor
+    psycopg2 = _psycopg2
+except ImportError:
+    pass
 
-        self.initialized = True
-        
-    def get_tools(self):
-        return [
-            {"name": "query", "description": "执行查询", "parameters": {'sql': 'SQL 语句'}},
-            {"name": "execute", "description": "执行命令", "parameters": {'sql': 'SQL 语句'}}
-        ]
-        
-    async def call_tool(self, tool: str, params: dict):
-        if not self.initialized:
-            raise RuntimeError("Postgres not initialized")
-        handler = getattr(self, f"_tool_{tool}", None)
-        if not handler:
-            raise ValueError(f"Unknown tool: {tool}")
-        return await handler(params)
+DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
+DB_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
+DB_NAME = os.getenv("POSTGRES_DB", "postgres")
+DB_USER = os.getenv("POSTGRES_USER", "postgres")
+DB_PASS = os.getenv("POSTGRES_PASS", "")
 
-tools = PostgresTools()
+class QueryRequest(BaseModel):
+    sql: str
+    params: Optional[List[Any]] = None
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy" if tools.initialized else "degraded", "node_id": "12", "name": "Postgres", "timestamp": datetime.now().isoformat()}
+    return {"status": "healthy" if psycopg2 else "degraded", "node_id": "12", "name": "Postgres", "psycopg2_available": psycopg2 is not None, "timestamp": datetime.now().isoformat()}
 
-@app.get("/tools")
-async def list_tools():
-    return {"tools": tools.get_tools()}
+def get_conn():
+    if not psycopg2:
+        raise HTTPException(status_code=503, detail="psycopg2 not installed. Run: pip install psycopg2-binary")
+    return psycopg2.connect(host=DB_HOST, port=DB_PORT, dbname=DB_NAME, user=DB_USER, password=DB_PASS)
+
+@app.post("/query")
+async def query(request: QueryRequest):
+    try:
+        conn = get_conn()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute(request.sql, request.params)
+        if request.sql.strip().upper().startswith("SELECT"):
+            rows = cur.fetchall()
+            result = {"success": True, "rows": [dict(row) for row in rows], "rowcount": len(rows)}
+        else:
+            conn.commit()
+            result = {"success": True, "rowcount": cur.rowcount}
+        cur.close()
+        conn.close()
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/mcp/call")
 async def mcp_call(request: dict):
-    try:
-        return {"success": True, "result": await tools.call_tool(request.get("tool"), request.get("params", {}))}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    tool = request.get("tool", "")
+    params = request.get("params", {})
+    if tool == "query": return await query(QueryRequest(**params))
+    raise HTTPException(status_code=400, detail=f"Unknown tool: {tool}")
 
 if __name__ == "__main__":
     import uvicorn

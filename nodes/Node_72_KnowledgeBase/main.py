@@ -1,72 +1,106 @@
-"""
-Node 72: KnowledgeBase
-====================
-RAG 知识库
-"""
-
-import os
+"""Node 72: KnowledgeBase - RAG 知识库"""
+import os, hashlib, json
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-app = FastAPI(title="Node 72 - KnowledgeBase", version="1.0.0")
+app = FastAPI(title="Node 72 - KnowledgeBase", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-class KnowledgeBaseTools:
-    def __init__(self):
-        
-        # 使用内存存储 (生产环境应使用 ChromaDB/Qdrant)
-        self.documents = []
-        
-    async def _tool_add_document(self, params):
-        doc_id = len(self.documents)
-        self.documents.append({"id": doc_id, "text": params.get("text", ""), "metadata": params.get("metadata", {})})
-        return {"success": True, "doc_id": doc_id}
-        
-    async def _tool_search(self, params):
-        query = params.get("query", "").lower()
-        results = [doc for doc in self.documents if query in doc["text"].lower()][:params.get("top_k", 5)]
-        return {"success": True, "results": results}
-        
-    async def _tool_delete(self, params):
-        doc_id = params.get("doc_id")
-        self.documents = [d for d in self.documents if d["id"] != doc_id]
-        return {"success": True}
+# 尝试导入向量数据库
+chromadb = None
+try:
+    import chromadb as _chromadb
+    chromadb = _chromadb
+except ImportError:
+    pass
 
-        self.initialized = True
-        
-    def get_tools(self):
-        return [
-            {"name": "add_document", "description": "添加文档", "parameters": {'text': '文档内容', 'metadata': '元数据'}},
-            {"name": "search", "description": "搜索知识", "parameters": {'query': '查询文本', 'top_k': '返回数量'}},
-            {"name": "delete", "description": "删除文档", "parameters": {'doc_id': '文档ID'}}
-        ]
-        
-    async def call_tool(self, tool: str, params: dict):
-        if not self.initialized:
-            raise RuntimeError("KnowledgeBase not initialized")
-        handler = getattr(self, f"_tool_{tool}", None)
-        if not handler:
-            raise ValueError(f"Unknown tool: {tool}")
-        return await handler(params)
+# 内存存储作为 fallback
+memory_store: Dict[str, Dict] = {}
 
-tools = KnowledgeBaseTools()
+class AddDocRequest(BaseModel):
+    content: str
+    metadata: Optional[Dict[str, Any]] = None
+    collection: str = "default"
+
+class SearchRequest(BaseModel):
+    query: str
+    limit: int = 5
+    collection: str = "default"
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy" if tools.initialized else "degraded", "node_id": "72", "name": "KnowledgeBase", "timestamp": datetime.now().isoformat()}
+    return {"status": "healthy", "node_id": "72", "name": "KnowledgeBase", "chromadb_available": chromadb is not None, "storage": "chromadb" if chromadb else "memory", "timestamp": datetime.now().isoformat()}
 
-@app.get("/tools")
-async def list_tools():
-    return {"tools": tools.get_tools()}
+@app.post("/add")
+async def add_document(request: AddDocRequest):
+    doc_id = hashlib.md5(request.content.encode()).hexdigest()[:12]
+    
+    if chromadb:
+        try:
+            client = chromadb.Client()
+            collection = client.get_or_create_collection(request.collection)
+            collection.add(documents=[request.content], metadatas=[request.metadata or {}], ids=[doc_id])
+            return {"success": True, "id": doc_id, "storage": "chromadb"}
+        except Exception as e:
+            pass
+    
+    # Fallback to memory
+    if request.collection not in memory_store:
+        memory_store[request.collection] = {}
+    memory_store[request.collection][doc_id] = {"content": request.content, "metadata": request.metadata or {}, "created_at": datetime.now().isoformat()}
+    return {"success": True, "id": doc_id, "storage": "memory"}
+
+@app.post("/search")
+async def search(request: SearchRequest):
+    if chromadb:
+        try:
+            client = chromadb.Client()
+            collection = client.get_or_create_collection(request.collection)
+            results = collection.query(query_texts=[request.query], n_results=request.limit)
+            return {"success": True, "results": [{"id": id, "content": doc, "metadata": meta} for id, doc, meta in zip(results["ids"][0], results["documents"][0], results["metadatas"][0])], "storage": "chromadb"}
+        except Exception as e:
+            pass
+    
+    # Fallback: simple keyword search
+    if request.collection not in memory_store:
+        return {"success": True, "results": [], "storage": "memory"}
+    
+    results = []
+    query_lower = request.query.lower()
+    for doc_id, doc in memory_store[request.collection].items():
+        if query_lower in doc["content"].lower():
+            results.append({"id": doc_id, "content": doc["content"], "metadata": doc["metadata"]})
+            if len(results) >= request.limit:
+                break
+    return {"success": True, "results": results, "storage": "memory"}
+
+@app.delete("/delete/{collection}/{doc_id}")
+async def delete_document(collection: str, doc_id: str):
+    if chromadb:
+        try:
+            client = chromadb.Client()
+            coll = client.get_or_create_collection(collection)
+            coll.delete(ids=[doc_id])
+            return {"success": True, "id": doc_id}
+        except:
+            pass
+    
+    if collection in memory_store and doc_id in memory_store[collection]:
+        del memory_store[collection][doc_id]
+        return {"success": True, "id": doc_id}
+    raise HTTPException(status_code=404, detail="Document not found")
 
 @app.post("/mcp/call")
 async def mcp_call(request: dict):
-    try:
-        return {"success": True, "result": await tools.call_tool(request.get("tool"), request.get("params", {}))}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    tool = request.get("tool", "")
+    params = request.get("params", {})
+    if tool == "add": return await add_document(AddDocRequest(**params))
+    elif tool == "search": return await search(SearchRequest(**params))
+    elif tool == "delete": return await delete_document(params.get("collection", "default"), params.get("doc_id"))
+    raise HTTPException(status_code=400, detail=f"Unknown tool: {tool}")
 
 if __name__ == "__main__":
     import uvicorn
