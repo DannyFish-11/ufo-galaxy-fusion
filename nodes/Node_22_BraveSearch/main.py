@@ -24,50 +24,48 @@ app.add_middleware(
 )
 
 # =============================================================================
+# Configuration
+# =============================================================================
+
+BRAVE_API_KEY = os.getenv("BRAVE_API_KEY", "")
+BRAVE_BASE_URL = "https://api.search.brave.com/res/v1"
+
+# =============================================================================
 # Tool Implementation
 # =============================================================================
 
 class BraveSearchTools:
     """
     BraveSearch 工具实现
-    
-    注意: 这是一个框架实现，实际使用时需要：
-    1. 安装依赖: pip install requests
-    2. 配置必要的环境变量或凭证
-    3. 根据实际需求完善工具逻辑
     """
     
     def __init__(self):
-        self.initialized = False
-        self._init_client()
+        self.api_key = BRAVE_API_KEY
+        self.base_url = BRAVE_BASE_URL
+        self.initialized = bool(self.api_key)
         
-    def _init_client(self):
-        """初始化客户端"""
-        try:
-            # TODO: 初始化 requests 客户端
-            self.initialized = True
-        except Exception as e:
-            print(f"Warning: Failed to initialize BraveSearch: {e}")
+        if not self.initialized:
+            print("Warning: BRAVE_API_KEY not set")
             
     def get_tools(self) -> List[Dict[str, Any]]:
         """获取可用工具列表"""
         return [
             {
-                "name": "search",
-                "description": "BraveSearch - search 操作",
-                "parameters": {}
-            },
-            {
-                "name": "news_search",
-                "description": "BraveSearch - news_search 操作",
-                "parameters": {}
+                "name": "web_search",
+                "description": "使用 Brave 搜索引擎进行网页搜索",
+                "parameters": {
+                    "query": "搜索关键词",
+                    "count": "返回结果数量 (1-20, 默认: 10)",
+                    "country": "国家代码 (例如: US, CN, 默认: US)",
+                    "search_lang": "搜索语言 (例如: en, zh, 默认: en)"
+                }
             }
         ]
         
     async def call_tool(self, tool: str, params: Dict[str, Any]) -> Any:
         """调用工具"""
         if not self.initialized:
-            raise RuntimeError("BraveSearch not initialized")
+            raise RuntimeError("BraveSearch API not initialized (missing API key)")
             
         handler = getattr(self, f"_tool_{tool}", None)
         if not handler:
@@ -75,15 +73,82 @@ class BraveSearchTools:
             
         return await handler(params)
         
-    async def _tool_search(self, params: dict) -> dict:
-        """search 操作"""
-        # TODO: 实现 search 逻辑
-        return {"status": "not_implemented", "tool": "search", "params": params}
-
-    async def _tool_news_search(self, params: dict) -> dict:
-        """news_search 操作"""
-        # TODO: 实现 news_search 逻辑
-        return {"status": "not_implemented", "tool": "news_search", "params": params}
+    async def _tool_web_search(self, params: dict) -> dict:
+        """网页搜索"""
+        import requests
+        
+        query = params.get("query", "")
+        count = min(int(params.get("count", 10)), 20)
+        country = params.get("country", "US")
+        search_lang = params.get("search_lang", "en")
+        
+        if not query:
+            return {"error": "搜索关键词不能为空"}
+        
+        try:
+            url = f"{self.base_url}/web/search"
+            headers = {
+                "Accept": "application/json",
+                "Accept-Encoding": "gzip",
+                "X-Subscription-Token": self.api_key
+            }
+            
+            response = requests.get(url, headers=headers, params={
+                "q": query,
+                "count": count,
+                "country": country,
+                "search_lang": search_lang,
+                "safesearch": "moderate",
+                "text_decorations": False,
+                "spellcheck": True
+            }, timeout=15)
+            
+            response.raise_for_status()
+            data = response.json()
+            
+            # 解析搜索结果
+            results = []
+            
+            # Web 结果
+            if "web" in data and "results" in data["web"]:
+                for item in data["web"]["results"]:
+                    results.append({
+                        "type": "web",
+                        "title": item.get("title", ""),
+                        "url": item.get("url", ""),
+                        "description": item.get("description", ""),
+                        "age": item.get("age", ""),
+                        "language": item.get("language", "")
+                    })
+            
+            # 新闻结果
+            if "news" in data and "results" in data["news"]:
+                for item in data["news"]["results"]:
+                    results.append({
+                        "type": "news",
+                        "title": item.get("title", ""),
+                        "url": item.get("url", ""),
+                        "description": item.get("description", ""),
+                        "age": item.get("age", ""),
+                        "source": item.get("meta_url", {}).get("hostname", "")
+                    })
+            
+            result = {
+                "query": data.get("query", {}).get("original", query),
+                "results_count": len(results),
+                "results": results[:count]
+            }
+            
+            # 添加拼写建议
+            if "query" in data and "altered" in data["query"]:
+                result["spell_suggestion"] = data["query"]["altered"]
+            
+            return result
+            
+        except requests.exceptions.HTTPError as e:
+            return {"error": f"API 错误: {e.response.status_code} - {e.response.text}"}
+        except Exception as e:
+            return {"error": f"搜索失败: {str(e)}"}
 
 
 # =============================================================================

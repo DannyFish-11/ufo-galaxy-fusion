@@ -63,6 +63,18 @@ echo [5/8] 配置环境变量...
 set ONEAPI_BASE_URL=http://!TAILSCALE_IP!:3000/v1
 set ONEAPI_API_KEY=sk-your-oneapi-key
 set PIXVERSE_API_KEY=sk-f5c7177f35ee6cceab5d97d6ffae26d0
+set GITHUB_TOKEN=
+set NOTION_API_KEY=
+set SILICON_FLOW_API_KEY=
+set BRAVE_API_KEY=
+set OPENWEATHER_API_KEY=
+set SLACK_TOKEN=
+set ZHIPU_API_KEY=
+set TOGETHER_API_KEY=
+set OPENROUTER_API_KEY=
+set GROQ_API_KEY=
+set GEMINI_API_KEY=
+set OPENAI_API_KEY=
 echo [✓] 环境变量已设置
 
 echo.
