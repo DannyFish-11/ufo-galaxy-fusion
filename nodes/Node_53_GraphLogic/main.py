@@ -1,152 +1,263 @@
 """
-Node 53: GraphLogic
-=======================
-知识图谱
-
-依赖库: networkx
-工具: add_node, add_edge, query, shortest_path
+Node 53: GraphLogic - 图论和逻辑推理
 """
-
 import os
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import List, Dict, Any, Optional, Set
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from collections import deque
+import heapq
 
-app = FastAPI(title="Node 53 - GraphLogic", version="1.0.0")
+app = FastAPI(title="Node 53 - GraphLogic", version="2.0.0")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+class Graph(BaseModel):
+    nodes: List[str]
+    edges: List[Dict[str, Any]]
+    directed: bool = False
 
-# =============================================================================
-# Tool Implementation
-# =============================================================================
+class PathRequest(BaseModel):
+    graph: Graph
+    start: str
+    end: str
+    algorithm: str = "dijkstra"
 
-class GraphLogicTools:
-    """
-    GraphLogic 工具实现
-    
-    注意: 这是一个框架实现，实际使用时需要：
-    1. 安装依赖: pip install networkx
-    2. 配置必要的环境变量或凭证
-    3. 根据实际需求完善工具逻辑
-    """
-    
-    def __init__(self):
-        self.initialized = False
-        self._init_client()
-        
-    def _init_client(self):
-        """初始化客户端"""
-        try:
-            # TODO: 初始化 networkx 客户端
-            self.initialized = True
-        except Exception as e:
-            print(f"Warning: Failed to initialize GraphLogic: {e}")
-            
-    def get_tools(self) -> List[Dict[str, Any]]:
-        """获取可用工具列表"""
-        return [
-            {
-                "name": "add_node",
-                "description": "GraphLogic - add_node 操作",
-                "parameters": {}
-            },
-            {
-                "name": "add_edge",
-                "description": "GraphLogic - add_edge 操作",
-                "parameters": {}
-            },
-            {
-                "name": "query",
-                "description": "GraphLogic - query 操作",
-                "parameters": {}
-            },
-            {
-                "name": "shortest_path",
-                "description": "GraphLogic - shortest_path 操作",
-                "parameters": {}
-            }
-        ]
-        
-    async def call_tool(self, tool: str, params: Dict[str, Any]) -> Any:
-        """调用工具"""
-        if not self.initialized:
-            raise RuntimeError("GraphLogic not initialized")
-            
-        handler = getattr(self, f"_tool_{tool}", None)
-        if not handler:
-            raise ValueError(f"Unknown tool: {tool}")
-            
-        return await handler(params)
-        
-    async def _tool_add_node(self, params: dict) -> dict:
-        """add_node 操作"""
-        # TODO: 实现 add_node 逻辑
-        return {"status": "not_implemented", "tool": "add_node", "params": params}
-
-    async def _tool_add_edge(self, params: dict) -> dict:
-        """add_edge 操作"""
-        # TODO: 实现 add_edge 逻辑
-        return {"status": "not_implemented", "tool": "add_edge", "params": params}
-
-    async def _tool_query(self, params: dict) -> dict:
-        """query 操作"""
-        # TODO: 实现 query 逻辑
-        return {"status": "not_implemented", "tool": "query", "params": params}
-
-    async def _tool_shortest_path(self, params: dict) -> dict:
-        """shortest_path 操作"""
-        # TODO: 实现 shortest_path 逻辑
-        return {"status": "not_implemented", "tool": "shortest_path", "params": params}
-
-
-# =============================================================================
-# Global Instance
-# =============================================================================
-
-tools = GraphLogicTools()
-
-# =============================================================================
-# API Endpoints
-# =============================================================================
+class LogicRequest(BaseModel):
+    premises: List[str]
+    query: str
 
 @app.get("/health")
 async def health():
-    """健康检查"""
-    return {
-        "status": "healthy" if tools.initialized else "degraded",
-        "node_id": "53",
-        "name": "GraphLogic",
-        "initialized": tools.initialized,
-        "timestamp": datetime.now().isoformat()
-    }
+    return {"status": "healthy", "node_id": "53", "name": "GraphLogic", "timestamp": datetime.now().isoformat()}
 
-@app.get("/tools")
-async def list_tools():
-    """列出可用工具"""
-    return {"tools": tools.get_tools()}
+def build_adjacency(graph: Graph) -> Dict[str, Dict[str, float]]:
+    adj = {node: {} for node in graph.nodes}
+    for edge in graph.edges:
+        src, dst = edge["source"], edge["target"]
+        weight = edge.get("weight", 1)
+        adj[src][dst] = weight
+        if not graph.directed:
+            adj[dst][src] = weight
+    return adj
+
+@app.post("/shortest_path")
+async def shortest_path(request: PathRequest):
+    adj = build_adjacency(request.graph)
+    
+    if request.algorithm == "dijkstra":
+        distances = {node: float('inf') for node in request.graph.nodes}
+        distances[request.start] = 0
+        previous = {}
+        pq = [(0, request.start)]
+        
+        while pq:
+            dist, current = heapq.heappop(pq)
+            if current == request.end:
+                break
+            if dist > distances[current]:
+                continue
+            for neighbor, weight in adj.get(current, {}).items():
+                new_dist = dist + weight
+                if new_dist < distances.get(neighbor, float('inf')):
+                    distances[neighbor] = new_dist
+                    previous[neighbor] = current
+                    heapq.heappush(pq, (new_dist, neighbor))
+        
+        path = []
+        current = request.end
+        while current in previous:
+            path.append(current)
+            current = previous[current]
+        path.append(request.start)
+        path.reverse()
+        
+        if distances[request.end] == float('inf'):
+            return {"success": False, "error": "No path found"}
+        
+        return {"success": True, "path": path, "distance": distances[request.end], "algorithm": "dijkstra"}
+    
+    elif request.algorithm == "bfs":
+        visited = {request.start}
+        queue = deque([(request.start, [request.start])])
+        
+        while queue:
+            current, path = queue.popleft()
+            if current == request.end:
+                return {"success": True, "path": path, "distance": len(path) - 1, "algorithm": "bfs"}
+            
+            for neighbor in adj.get(current, {}):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append((neighbor, path + [neighbor]))
+        
+        return {"success": False, "error": "No path found"}
+    
+    return {"success": False, "error": f"Unknown algorithm: {request.algorithm}"}
+
+@app.post("/connected_components")
+async def connected_components(graph: Graph):
+    adj = build_adjacency(graph)
+    visited = set()
+    components = []
+    
+    def dfs(node: str, component: List[str]):
+        visited.add(node)
+        component.append(node)
+        for neighbor in adj.get(node, {}):
+            if neighbor not in visited:
+                dfs(neighbor, component)
+    
+    for node in graph.nodes:
+        if node not in visited:
+            component = []
+            dfs(node, component)
+            components.append(component)
+    
+    return {"success": True, "components": components, "count": len(components)}
+
+@app.post("/topological_sort")
+async def topological_sort(graph: Graph):
+    if not graph.directed:
+        return {"success": False, "error": "Topological sort requires directed graph"}
+    
+    adj = build_adjacency(graph)
+    in_degree = {node: 0 for node in graph.nodes}
+    
+    for edge in graph.edges:
+        in_degree[edge["target"]] += 1
+    
+    queue = deque([node for node, deg in in_degree.items() if deg == 0])
+    result = []
+    
+    while queue:
+        current = queue.popleft()
+        result.append(current)
+        for neighbor in adj.get(current, {}):
+            in_degree[neighbor] -= 1
+            if in_degree[neighbor] == 0:
+                queue.append(neighbor)
+    
+    if len(result) != len(graph.nodes):
+        return {"success": False, "error": "Graph has cycle"}
+    
+    return {"success": True, "order": result}
+
+@app.post("/cycle_detection")
+async def detect_cycle(graph: Graph):
+    adj = build_adjacency(graph)
+    
+    if graph.directed:
+        WHITE, GRAY, BLACK = 0, 1, 2
+        color = {node: WHITE for node in graph.nodes}
+        
+        def dfs(node):
+            color[node] = GRAY
+            for neighbor in adj.get(node, {}):
+                if color[neighbor] == GRAY:
+                    return True
+                if color[neighbor] == WHITE and dfs(neighbor):
+                    return True
+            color[node] = BLACK
+            return False
+        
+        for node in graph.nodes:
+            if color[node] == WHITE and dfs(node):
+                return {"success": True, "has_cycle": True}
+        return {"success": True, "has_cycle": False}
+    else:
+        visited = set()
+        
+        def dfs(node, parent):
+            visited.add(node)
+            for neighbor in adj.get(node, {}):
+                if neighbor not in visited:
+                    if dfs(neighbor, node):
+                        return True
+                elif neighbor != parent:
+                    return True
+            return False
+        
+        for node in graph.nodes:
+            if node not in visited:
+                if dfs(node, None):
+                    return {"success": True, "has_cycle": True}
+        return {"success": True, "has_cycle": False}
+
+@app.post("/mst")
+async def minimum_spanning_tree(graph: Graph):
+    if graph.directed:
+        return {"success": False, "error": "MST requires undirected graph"}
+    
+    edges = [(e.get("weight", 1), e["source"], e["target"]) for e in graph.edges]
+    edges.sort()
+    
+    parent = {node: node for node in graph.nodes}
+    rank = {node: 0 for node in graph.nodes}
+    
+    def find(x):
+        if parent[x] != x:
+            parent[x] = find(parent[x])
+        return parent[x]
+    
+    def union(x, y):
+        px, py = find(x), find(y)
+        if px == py:
+            return False
+        if rank[px] < rank[py]:
+            px, py = py, px
+        parent[py] = px
+        if rank[px] == rank[py]:
+            rank[px] += 1
+        return True
+    
+    mst_edges = []
+    total_weight = 0
+    
+    for weight, src, dst in edges:
+        if union(src, dst):
+            mst_edges.append({"source": src, "target": dst, "weight": weight})
+            total_weight += weight
+    
+    return {"success": True, "edges": mst_edges, "total_weight": total_weight}
+
+@app.post("/logic/evaluate")
+async def evaluate_logic(request: LogicRequest):
+    facts = set()
+    rules = []
+    
+    for premise in request.premises:
+        if "->" in premise:
+            parts = premise.split("->")
+            antecedent = parts[0].strip()
+            consequent = parts[1].strip()
+            rules.append((antecedent, consequent))
+        else:
+            facts.add(premise.strip())
+    
+    changed = True
+    while changed:
+        changed = False
+        for antecedent, consequent in rules:
+            if antecedent in facts and consequent not in facts:
+                facts.add(consequent)
+                changed = True
+    
+    result = request.query in facts
+    return {"success": True, "query": request.query, "result": result, "derived_facts": list(facts)}
 
 @app.post("/mcp/call")
-async def mcp_call(request: Dict[str, Any]):
-    """MCP 工具调用接口"""
+async def mcp_call(request: dict):
     tool = request.get("tool", "")
     params = request.get("params", {})
-    
-    try:
-        result = await tools.call_tool(tool, params)
-        return {"success": True, "result": result}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# =============================================================================
-# Main
-# =============================================================================
+    if tool == "shortest_path": return await shortest_path(PathRequest(**params))
+    elif tool == "connected_components": return await connected_components(Graph(**params.get("graph", {})))
+    elif tool == "topological_sort": return await topological_sort(Graph(**params.get("graph", {})))
+    elif tool == "cycle_detection": return await detect_cycle(Graph(**params.get("graph", {})))
+    elif tool == "mst": return await minimum_spanning_tree(Graph(**params.get("graph", {})))
+    elif tool == "logic_evaluate": return await evaluate_logic(LogicRequest(**params))
+    raise HTTPException(status_code=400, detail=f"Unknown tool: {tool}")
 
 if __name__ == "__main__":
     import uvicorn

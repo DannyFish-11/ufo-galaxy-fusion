@@ -1,152 +1,196 @@
 """
-Node 45: DesktopAuto
-========================
-桌面自动化
-
-依赖库: pyautogui
-工具: click, type_text, screenshot, move
+Node 45: DesktopAuto - 跨平台桌面自动化
 """
-
-import os
+import os, sys, time, base64
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Optional, Tuple
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-app = FastAPI(title="Node 45 - DesktopAuto", version="1.0.0")
+app = FastAPI(title="Node 45 - DesktopAuto", version="2.0.0")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+pyautogui = None
+try:
+    import pyautogui as _pyautogui
+    _pyautogui.FAILSAFE = True
+    _pyautogui.PAUSE = 0.1
+    pyautogui = _pyautogui
+except ImportError:
+    pass
 
-# =============================================================================
-# Tool Implementation
-# =============================================================================
+class ClickRequest(BaseModel):
+    x: int
+    y: int
+    clicks: int = 1
+    button: str = "left"
 
-class DesktopAutoTools:
-    """
-    DesktopAuto 工具实现
-    
-    注意: 这是一个框架实现，实际使用时需要：
-    1. 安装依赖: pip install pyautogui
-    2. 配置必要的环境变量或凭证
-    3. 根据实际需求完善工具逻辑
-    """
-    
-    def __init__(self):
-        self.initialized = False
-        self._init_client()
-        
-    def _init_client(self):
-        """初始化客户端"""
-        try:
-            # TODO: 初始化 pyautogui 客户端
-            self.initialized = True
-        except Exception as e:
-            print(f"Warning: Failed to initialize DesktopAuto: {e}")
-            
-    def get_tools(self) -> List[Dict[str, Any]]:
-        """获取可用工具列表"""
-        return [
-            {
-                "name": "click",
-                "description": "DesktopAuto - click 操作",
-                "parameters": {}
-            },
-            {
-                "name": "type_text",
-                "description": "DesktopAuto - type_text 操作",
-                "parameters": {}
-            },
-            {
-                "name": "screenshot",
-                "description": "DesktopAuto - screenshot 操作",
-                "parameters": {}
-            },
-            {
-                "name": "move",
-                "description": "DesktopAuto - move 操作",
-                "parameters": {}
-            }
-        ]
-        
-    async def call_tool(self, tool: str, params: Dict[str, Any]) -> Any:
-        """调用工具"""
-        if not self.initialized:
-            raise RuntimeError("DesktopAuto not initialized")
-            
-        handler = getattr(self, f"_tool_{tool}", None)
-        if not handler:
-            raise ValueError(f"Unknown tool: {tool}")
-            
-        return await handler(params)
-        
-    async def _tool_click(self, params: dict) -> dict:
-        """click 操作"""
-        # TODO: 实现 click 逻辑
-        return {"status": "not_implemented", "tool": "click", "params": params}
+class TypeRequest(BaseModel):
+    text: str
+    interval: float = 0.05
 
-    async def _tool_type_text(self, params: dict) -> dict:
-        """type_text 操作"""
-        # TODO: 实现 type_text 逻辑
-        return {"status": "not_implemented", "tool": "type_text", "params": params}
+class KeyRequest(BaseModel):
+    keys: str
 
-    async def _tool_screenshot(self, params: dict) -> dict:
-        """screenshot 操作"""
-        # TODO: 实现 screenshot 逻辑
-        return {"status": "not_implemented", "tool": "screenshot", "params": params}
+class MoveRequest(BaseModel):
+    x: int
+    y: int
+    duration: float = 0.5
 
-    async def _tool_move(self, params: dict) -> dict:
-        """move 操作"""
-        # TODO: 实现 move 逻辑
-        return {"status": "not_implemented", "tool": "move", "params": params}
-
-
-# =============================================================================
-# Global Instance
-# =============================================================================
-
-tools = DesktopAutoTools()
-
-# =============================================================================
-# API Endpoints
-# =============================================================================
+class LocateRequest(BaseModel):
+    image_path: str
+    confidence: float = 0.9
 
 @app.get("/health")
 async def health():
-    """健康检查"""
-    return {
-        "status": "healthy" if tools.initialized else "degraded",
-        "node_id": "45",
-        "name": "DesktopAuto",
-        "initialized": tools.initialized,
-        "timestamp": datetime.now().isoformat()
-    }
+    return {"status": "healthy" if pyautogui else "degraded", "node_id": "45", "name": "DesktopAuto", "pyautogui_available": pyautogui is not None, "platform": sys.platform, "timestamp": datetime.now().isoformat()}
 
-@app.get("/tools")
-async def list_tools():
-    """列出可用工具"""
-    return {"tools": tools.get_tools()}
-
-@app.post("/mcp/call")
-async def mcp_call(request: Dict[str, Any]):
-    """MCP 工具调用接口"""
-    tool = request.get("tool", "")
-    params = request.get("params", {})
+@app.post("/click")
+async def click(request: ClickRequest):
+    if not pyautogui:
+        return {"success": False, "error": "pyautogui not installed"}
     
     try:
-        result = await tools.call_tool(tool, params)
-        return {"success": True, "result": result}
+        pyautogui.click(x=request.x, y=request.y, clicks=request.clicks, button=request.button)
+        return {"success": True, "x": request.x, "y": request.y, "clicks": request.clicks}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"success": False, "error": str(e)}
 
-# =============================================================================
-# Main
-# =============================================================================
+@app.post("/double_click")
+async def double_click(x: int, y: int):
+    if not pyautogui:
+        return {"success": False, "error": "pyautogui not installed"}
+    
+    try:
+        pyautogui.doubleClick(x=x, y=y)
+        return {"success": True, "x": x, "y": y}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/type")
+async def type_text(request: TypeRequest):
+    if not pyautogui:
+        return {"success": False, "error": "pyautogui not installed"}
+    
+    try:
+        pyautogui.write(request.text, interval=request.interval)
+        return {"success": True, "typed": len(request.text)}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/hotkey")
+async def press_hotkey(request: KeyRequest):
+    if not pyautogui:
+        return {"success": False, "error": "pyautogui not installed"}
+    
+    try:
+        keys = request.keys.split("+")
+        pyautogui.hotkey(*keys)
+        return {"success": True, "keys": keys}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/press")
+async def press_key(key: str):
+    if not pyautogui:
+        return {"success": False, "error": "pyautogui not installed"}
+    
+    try:
+        pyautogui.press(key)
+        return {"success": True, "key": key}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/move")
+async def move_mouse(request: MoveRequest):
+    if not pyautogui:
+        return {"success": False, "error": "pyautogui not installed"}
+    
+    try:
+        pyautogui.moveTo(request.x, request.y, duration=request.duration)
+        return {"success": True, "x": request.x, "y": request.y}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/scroll")
+async def scroll(amount: int, x: Optional[int] = None, y: Optional[int] = None):
+    if not pyautogui:
+        return {"success": False, "error": "pyautogui not installed"}
+    
+    try:
+        pyautogui.scroll(amount, x=x, y=y)
+        return {"success": True, "amount": amount}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.get("/screenshot")
+async def take_screenshot():
+    if not pyautogui:
+        return {"success": False, "error": "pyautogui not installed"}
+    
+    try:
+        import io
+        screenshot = pyautogui.screenshot()
+        buffer = io.BytesIO()
+        screenshot.save(buffer, format="PNG")
+        img_base64 = base64.b64encode(buffer.getvalue()).decode()
+        return {"success": True, "image": img_base64, "width": screenshot.width, "height": screenshot.height}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.get("/position")
+async def get_position():
+    if not pyautogui:
+        return {"success": False, "error": "pyautogui not installed"}
+    
+    try:
+        x, y = pyautogui.position()
+        return {"success": True, "x": x, "y": y}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.get("/screen_size")
+async def get_screen_size():
+    if not pyautogui:
+        return {"success": False, "error": "pyautogui not installed"}
+    
+    try:
+        width, height = pyautogui.size()
+        return {"success": True, "width": width, "height": height}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/locate")
+async def locate_on_screen(request: LocateRequest):
+    if not pyautogui:
+        return {"success": False, "error": "pyautogui not installed"}
+    
+    try:
+        location = pyautogui.locateOnScreen(request.image_path, confidence=request.confidence)
+        if location:
+            center = pyautogui.center(location)
+            return {"success": True, "found": True, "x": center.x, "y": center.y, "region": {"left": location.left, "top": location.top, "width": location.width, "height": location.height}}
+        return {"success": True, "found": False}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/mcp/call")
+async def mcp_call(request: dict):
+    tool = request.get("tool", "")
+    params = request.get("params", {})
+    if tool == "click": return await click(ClickRequest(**params))
+    elif tool == "double_click": return await double_click(params.get("x", 0), params.get("y", 0))
+    elif tool == "type": return await type_text(TypeRequest(**params))
+    elif tool == "hotkey": return await press_hotkey(KeyRequest(**params))
+    elif tool == "press": return await press_key(params.get("key", ""))
+    elif tool == "move": return await move_mouse(MoveRequest(**params))
+    elif tool == "scroll": return await scroll(params.get("amount", 0), params.get("x"), params.get("y"))
+    elif tool == "screenshot": return await take_screenshot()
+    elif tool == "position": return await get_position()
+    elif tool == "screen_size": return await get_screen_size()
+    elif tool == "locate": return await locate_on_screen(LocateRequest(**params))
+    raise HTTPException(status_code=400, detail=f"Unknown tool: {tool}")
 
 if __name__ == "__main__":
     import uvicorn

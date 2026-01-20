@@ -1,142 +1,139 @@
 """
-Node 43: MAVLink
-====================
-无人机协议
-
-依赖库: pymavlink
-工具: connect, send_command, get_telemetry
+Node 43: MAVLink - 无人机通信协议
 """
-
-import os
+import os, time
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-app = FastAPI(title="Node 43 - MAVLink", version="1.0.0")
+app = FastAPI(title="Node 43 - MAVLink", version="2.0.0")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+pymavlink = None
+try:
+    from pymavlink import mavutil
+    pymavlink = mavutil
+except ImportError:
+    pass
 
-# =============================================================================
-# Tool Implementation
-# =============================================================================
+connections = {}
 
-class MAVLinkTools:
-    """
-    MAVLink 工具实现
-    
-    注意: 这是一个框架实现，实际使用时需要：
-    1. 安装依赖: pip install pymavlink
-    2. 配置必要的环境变量或凭证
-    3. 根据实际需求完善工具逻辑
-    """
-    
-    def __init__(self):
-        self.initialized = False
-        self._init_client()
-        
-    def _init_client(self):
-        """初始化客户端"""
-        try:
-            # TODO: 初始化 pymavlink 客户端
-            self.initialized = True
-        except Exception as e:
-            print(f"Warning: Failed to initialize MAVLink: {e}")
-            
-    def get_tools(self) -> List[Dict[str, Any]]:
-        """获取可用工具列表"""
-        return [
-            {
-                "name": "connect",
-                "description": "MAVLink - connect 操作",
-                "parameters": {}
-            },
-            {
-                "name": "send_command",
-                "description": "MAVLink - send_command 操作",
-                "parameters": {}
-            },
-            {
-                "name": "get_telemetry",
-                "description": "MAVLink - get_telemetry 操作",
-                "parameters": {}
-            }
-        ]
-        
-    async def call_tool(self, tool: str, params: Dict[str, Any]) -> Any:
-        """调用工具"""
-        if not self.initialized:
-            raise RuntimeError("MAVLink not initialized")
-            
-        handler = getattr(self, f"_tool_{tool}", None)
-        if not handler:
-            raise ValueError(f"Unknown tool: {tool}")
-            
-        return await handler(params)
-        
-    async def _tool_connect(self, params: dict) -> dict:
-        """connect 操作"""
-        # TODO: 实现 connect 逻辑
-        return {"status": "not_implemented", "tool": "connect", "params": params}
+class ConnectRequest(BaseModel):
+    connection_string: str
+    baud: int = 57600
 
-    async def _tool_send_command(self, params: dict) -> dict:
-        """send_command 操作"""
-        # TODO: 实现 send_command 逻辑
-        return {"status": "not_implemented", "tool": "send_command", "params": params}
-
-    async def _tool_get_telemetry(self, params: dict) -> dict:
-        """get_telemetry 操作"""
-        # TODO: 实现 get_telemetry 逻辑
-        return {"status": "not_implemented", "tool": "get_telemetry", "params": params}
-
-
-# =============================================================================
-# Global Instance
-# =============================================================================
-
-tools = MAVLinkTools()
-
-# =============================================================================
-# API Endpoints
-# =============================================================================
+class CommandRequest(BaseModel):
+    connection_id: str
+    command: str
+    params: Optional[dict] = None
 
 @app.get("/health")
 async def health():
-    """健康检查"""
-    return {
-        "status": "healthy" if tools.initialized else "degraded",
-        "node_id": "43",
-        "name": "MAVLink",
-        "initialized": tools.initialized,
-        "timestamp": datetime.now().isoformat()
-    }
+    return {"status": "healthy" if pymavlink else "degraded", "node_id": "43", "name": "MAVLink", "pymavlink_available": pymavlink is not None, "active_connections": len(connections), "timestamp": datetime.now().isoformat()}
 
-@app.get("/tools")
-async def list_tools():
-    """列出可用工具"""
-    return {"tools": tools.get_tools()}
-
-@app.post("/mcp/call")
-async def mcp_call(request: Dict[str, Any]):
-    """MCP 工具调用接口"""
-    tool = request.get("tool", "")
-    params = request.get("params", {})
+@app.post("/connect")
+async def connect(request: ConnectRequest):
+    if not pymavlink:
+        return {"success": False, "error": "pymavlink not installed. Run: pip install pymavlink"}
     
     try:
-        result = await tools.call_tool(tool, params)
-        return {"success": True, "result": result}
+        conn = pymavlink.mavlink_connection(request.connection_string, baud=request.baud)
+        conn.wait_heartbeat(timeout=10)
+        
+        conn_id = f"mav_{len(connections)}"
+        connections[conn_id] = conn
+        
+        return {"success": True, "connection_id": conn_id, "system_id": conn.target_system, "component_id": conn.target_component}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"success": False, "error": str(e)}
 
-# =============================================================================
-# Main
-# =============================================================================
+@app.post("/disconnect")
+async def disconnect(connection_id: str):
+    if connection_id in connections:
+        try:
+            connections[connection_id].close()
+            del connections[connection_id]
+            return {"success": True}
+        except:
+            pass
+    return {"success": False, "error": "Connection not found"}
+
+@app.post("/arm")
+async def arm(connection_id: str):
+    if connection_id not in connections:
+        return {"success": False, "error": "Connection not found"}
+    
+    try:
+        conn = connections[connection_id]
+        conn.arducopter_arm()
+        return {"success": True, "message": "Arm command sent"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/disarm")
+async def disarm(connection_id: str):
+    if connection_id not in connections:
+        return {"success": False, "error": "Connection not found"}
+    
+    try:
+        conn = connections[connection_id]
+        conn.arducopter_disarm()
+        return {"success": True, "message": "Disarm command sent"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/takeoff")
+async def takeoff(connection_id: str, altitude: float = 10.0):
+    if connection_id not in connections:
+        return {"success": False, "error": "Connection not found"}
+    
+    try:
+        conn = connections[connection_id]
+        conn.mav.command_long_send(conn.target_system, conn.target_component, pymavlink.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, altitude)
+        return {"success": True, "message": f"Takeoff to {altitude}m commanded"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.get("/telemetry/{connection_id}")
+async def get_telemetry(connection_id: str):
+    if connection_id not in connections:
+        return {"success": False, "error": "Connection not found"}
+    
+    try:
+        conn = connections[connection_id]
+        
+        msg = conn.recv_match(type='GLOBAL_POSITION_INT', blocking=True, timeout=5)
+        position = None
+        if msg:
+            position = {"lat": msg.lat / 1e7, "lon": msg.lon / 1e7, "alt": msg.alt / 1000, "relative_alt": msg.relative_alt / 1000}
+        
+        msg = conn.recv_match(type='ATTITUDE', blocking=True, timeout=5)
+        attitude = None
+        if msg:
+            attitude = {"roll": msg.roll, "pitch": msg.pitch, "yaw": msg.yaw}
+        
+        msg = conn.recv_match(type='SYS_STATUS', blocking=True, timeout=5)
+        battery = None
+        if msg:
+            battery = {"voltage": msg.voltage_battery / 1000, "current": msg.current_battery / 100, "remaining": msg.battery_remaining}
+        
+        return {"success": True, "position": position, "attitude": attitude, "battery": battery}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/mcp/call")
+async def mcp_call(request: dict):
+    tool = request.get("tool", "")
+    params = request.get("params", {})
+    if tool == "connect": return await connect(ConnectRequest(**params))
+    elif tool == "disconnect": return await disconnect(params.get("connection_id", ""))
+    elif tool == "arm": return await arm(params.get("connection_id", ""))
+    elif tool == "disarm": return await disarm(params.get("connection_id", ""))
+    elif tool == "takeoff": return await takeoff(params.get("connection_id", ""), params.get("altitude", 10.0))
+    elif tool == "telemetry": return await get_telemetry(params.get("connection_id", ""))
+    raise HTTPException(status_code=400, detail=f"Unknown tool: {tool}")
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,152 +1,127 @@
 """
-Node 38: BLE
-================
-蓝牙低功耗
-
-依赖库: bleak
-工具: scan, connect, read_char, write_char
+Node 38: BLE - 蓝牙低功耗通信
 """
-
-import os
+import os, asyncio
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Optional, List
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-app = FastAPI(title="Node 38 - BLE", version="1.0.0")
+app = FastAPI(title="Node 38 - BLE", version="2.0.0")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+bleak = None
+try:
+    from bleak import BleakScanner, BleakClient
+    bleak = True
+except ImportError:
+    pass
 
-# =============================================================================
-# Tool Implementation
-# =============================================================================
+devices = {}
 
-class BLETools:
-    """
-    BLE 工具实现
-    
-    注意: 这是一个框架实现，实际使用时需要：
-    1. 安装依赖: pip install bleak
-    2. 配置必要的环境变量或凭证
-    3. 根据实际需求完善工具逻辑
-    """
-    
-    def __init__(self):
-        self.initialized = False
-        self._init_client()
-        
-    def _init_client(self):
-        """初始化客户端"""
-        try:
-            # TODO: 初始化 bleak 客户端
-            self.initialized = True
-        except Exception as e:
-            print(f"Warning: Failed to initialize BLE: {e}")
-            
-    def get_tools(self) -> List[Dict[str, Any]]:
-        """获取可用工具列表"""
-        return [
-            {
-                "name": "scan",
-                "description": "BLE - scan 操作",
-                "parameters": {}
-            },
-            {
-                "name": "connect",
-                "description": "BLE - connect 操作",
-                "parameters": {}
-            },
-            {
-                "name": "read_char",
-                "description": "BLE - read_char 操作",
-                "parameters": {}
-            },
-            {
-                "name": "write_char",
-                "description": "BLE - write_char 操作",
-                "parameters": {}
-            }
-        ]
-        
-    async def call_tool(self, tool: str, params: Dict[str, Any]) -> Any:
-        """调用工具"""
-        if not self.initialized:
-            raise RuntimeError("BLE not initialized")
-            
-        handler = getattr(self, f"_tool_{tool}", None)
-        if not handler:
-            raise ValueError(f"Unknown tool: {tool}")
-            
-        return await handler(params)
-        
-    async def _tool_scan(self, params: dict) -> dict:
-        """scan 操作"""
-        # TODO: 实现 scan 逻辑
-        return {"status": "not_implemented", "tool": "scan", "params": params}
+class ConnectRequest(BaseModel):
+    address: str
+    timeout: float = 10.0
 
-    async def _tool_connect(self, params: dict) -> dict:
-        """connect 操作"""
-        # TODO: 实现 connect 逻辑
-        return {"status": "not_implemented", "tool": "connect", "params": params}
-
-    async def _tool_read_char(self, params: dict) -> dict:
-        """read_char 操作"""
-        # TODO: 实现 read_char 逻辑
-        return {"status": "not_implemented", "tool": "read_char", "params": params}
-
-    async def _tool_write_char(self, params: dict) -> dict:
-        """write_char 操作"""
-        # TODO: 实现 write_char 逻辑
-        return {"status": "not_implemented", "tool": "write_char", "params": params}
-
-
-# =============================================================================
-# Global Instance
-# =============================================================================
-
-tools = BLETools()
-
-# =============================================================================
-# API Endpoints
-# =============================================================================
+class ReadWriteRequest(BaseModel):
+    address: str
+    characteristic: str
+    value: Optional[str] = None
 
 @app.get("/health")
 async def health():
-    """健康检查"""
-    return {
-        "status": "healthy" if tools.initialized else "degraded",
-        "node_id": "38",
-        "name": "BLE",
-        "initialized": tools.initialized,
-        "timestamp": datetime.now().isoformat()
-    }
+    return {"status": "healthy" if bleak else "degraded", "node_id": "38", "name": "BLE", "bleak_available": bleak is not None, "timestamp": datetime.now().isoformat()}
 
-@app.get("/tools")
-async def list_tools():
-    """列出可用工具"""
-    return {"tools": tools.get_tools()}
-
-@app.post("/mcp/call")
-async def mcp_call(request: Dict[str, Any]):
-    """MCP 工具调用接口"""
-    tool = request.get("tool", "")
-    params = request.get("params", {})
+@app.get("/scan")
+async def scan_devices(timeout: float = 5.0):
+    if not bleak:
+        return {"success": False, "error": "bleak not installed. Run: pip install bleak"}
     
     try:
-        result = await tools.call_tool(tool, params)
-        return {"success": True, "result": result}
+        from bleak import BleakScanner
+        discovered = await BleakScanner.discover(timeout=timeout)
+        results = [{"name": d.name or "Unknown", "address": d.address, "rssi": d.rssi} for d in discovered]
+        return {"success": True, "devices": results, "count": len(results)}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"success": False, "error": str(e)}
 
-# =============================================================================
-# Main
-# =============================================================================
+@app.post("/connect")
+async def connect_device(request: ConnectRequest):
+    if not bleak:
+        return {"success": False, "error": "bleak not installed"}
+    
+    try:
+        from bleak import BleakClient
+        client = BleakClient(request.address)
+        await asyncio.wait_for(client.connect(), timeout=request.timeout)
+        
+        if client.is_connected:
+            devices[request.address] = client
+            services = []
+            for service in client.services:
+                chars = [{"uuid": c.uuid, "properties": c.properties} for c in service.characteristics]
+                services.append({"uuid": service.uuid, "characteristics": chars})
+            return {"success": True, "address": request.address, "services": services}
+        return {"success": False, "error": "Failed to connect"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/disconnect")
+async def disconnect_device(address: str):
+    if address in devices:
+        try:
+            await devices[address].disconnect()
+            del devices[address]
+            return {"success": True, "address": address}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    return {"success": False, "error": "Device not connected"}
+
+@app.post("/read")
+async def read_characteristic(request: ReadWriteRequest):
+    if not bleak:
+        return {"success": False, "error": "bleak not installed"}
+    
+    if request.address not in devices:
+        return {"success": False, "error": "Device not connected"}
+    
+    try:
+        client = devices[request.address]
+        value = await client.read_gatt_char(request.characteristic)
+        return {"success": True, "value": value.hex(), "raw": list(value)}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/write")
+async def write_characteristic(request: ReadWriteRequest):
+    if not bleak:
+        return {"success": False, "error": "bleak not installed"}
+    
+    if request.address not in devices:
+        return {"success": False, "error": "Device not connected"}
+    
+    if not request.value:
+        return {"success": False, "error": "No value provided"}
+    
+    try:
+        client = devices[request.address]
+        data = bytes.fromhex(request.value)
+        await client.write_gatt_char(request.characteristic, data)
+        return {"success": True, "written": request.value}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/mcp/call")
+async def mcp_call(request: dict):
+    tool = request.get("tool", "")
+    params = request.get("params", {})
+    if tool == "scan": return await scan_devices(params.get("timeout", 5.0))
+    elif tool == "connect": return await connect_device(ConnectRequest(**params))
+    elif tool == "disconnect": return await disconnect_device(params.get("address", ""))
+    elif tool == "read": return await read_characteristic(ReadWriteRequest(**params))
+    elif tool == "write": return await write_characteristic(ReadWriteRequest(**params))
+    raise HTTPException(status_code=400, detail=f"Unknown tool: {tool}")
 
 if __name__ == "__main__":
     import uvicorn

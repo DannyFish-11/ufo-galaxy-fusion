@@ -1,41 +1,71 @@
-"""Node 44: NFC - NFC 读写"""
+"""
+Node 44: NFC - 近场通信
+"""
 import os
 from datetime import datetime
+from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-app = FastAPI(title="Node 44 - NFC", version="1.0.0")
+app = FastAPI(title="Node 44 - NFC", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-class NFCTools:
-    def __init__(self):
-        self.initialized = True
-    def get_tools(self):
-        return [{"name": "read", "description": "读取标签", "parameters": {}}]
-    async def call_tool(self, tool: str, params: dict):
-        handler = getattr(self, f"_tool_{tool}", None)
-        if not handler:
-            raise ValueError(f"Unknown tool: {tool}")
-        return await handler(params)
-    async def _tool_read(self, params):
-        return {"success": True, "message": "功能实现中 (演示模式)"}
+nfc = None
+try:
+    import nfc as _nfc
+    nfc = _nfc
+except ImportError:
+    pass
 
-tools = NFCTools()
+class WriteRequest(BaseModel):
+    data: str
+    timeout: float = 5.0
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "node_id": "44", "name": "NFC", "timestamp": datetime.now().isoformat()}
+    return {"status": "healthy" if nfc else "degraded", "node_id": "44", "name": "NFC", "nfc_available": nfc is not None, "timestamp": datetime.now().isoformat()}
 
-@app.get("/tools")
-async def list_tools():
-    return {"tools": tools.get_tools()}
+@app.get("/read")
+async def read_tag(timeout: float = 5.0):
+    if not nfc:
+        raise HTTPException(status_code=503, detail="nfcpy not installed")
+    try:
+        clf = nfc.ContactlessFrontend("usb")
+        tag = clf.connect(rdwr={"on-connect": lambda tag: False}, terminate=lambda: False)
+        if tag:
+            data = tag.ndef.message if tag.ndef else None
+            clf.close()
+            return {"success": True, "tag_type": str(type(tag).__name__), "data": str(data) if data else None}
+        clf.close()
+        return {"success": False, "message": "No tag found"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/write")
+async def write_tag(request: WriteRequest):
+    if not nfc:
+        raise HTTPException(status_code=503, detail="nfcpy not installed")
+    try:
+        clf = nfc.ContactlessFrontend("usb")
+        tag = clf.connect(rdwr={"on-connect": lambda tag: False})
+        if tag and tag.ndef:
+            import ndef
+            tag.ndef.records = [ndef.TextRecord(request.data)]
+            clf.close()
+            return {"success": True, "data": request.data}
+        clf.close()
+        return {"success": False, "message": "No writable tag found"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 @app.post("/mcp/call")
 async def mcp_call(request: dict):
-    try:
-        return {"success": True, "result": await tools.call_tool(request.get("tool"), request.get("params", {}))}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    tool = request.get("tool", "")
+    params = request.get("params", {})
+    if tool == "read": return await read_tag(params.get("timeout", 5.0))
+    elif tool == "write": return await write_tag(WriteRequest(**params))
+    raise HTTPException(status_code=400, detail=f"Unknown tool: {tool}")
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,152 +1,115 @@
 """
-Node 23: Time
-=================
-时间工具
-
-依赖库: pytz
-工具: now, format, parse, timezone
+Node 23: Time - 时间和时区处理
 """
-
 import os
-from datetime import datetime
-from typing import Dict, Any, List, Optional
+from datetime import datetime, timedelta
+from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-app = FastAPI(title="Node 23 - Time", version="1.0.0")
+app = FastAPI(title="Node 23 - Time", version="2.0.0")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+pytz = None
+try:
+    import pytz as _pytz
+    pytz = _pytz
+except ImportError:
+    pass
 
-# =============================================================================
-# Tool Implementation
-# =============================================================================
+class FormatRequest(BaseModel):
+    timestamp: Optional[float] = None
+    format: str = "%Y-%m-%d %H:%M:%S"
+    timezone: str = "UTC"
 
-class TimeTools:
-    """
-    Time 工具实现
-    
-    注意: 这是一个框架实现，实际使用时需要：
-    1. 安装依赖: pip install pytz
-    2. 配置必要的环境变量或凭证
-    3. 根据实际需求完善工具逻辑
-    """
-    
-    def __init__(self):
-        self.initialized = False
-        self._init_client()
-        
-    def _init_client(self):
-        """初始化客户端"""
-        try:
-            # TODO: 初始化 pytz 客户端
-            self.initialized = True
-        except Exception as e:
-            print(f"Warning: Failed to initialize Time: {e}")
-            
-    def get_tools(self) -> List[Dict[str, Any]]:
-        """获取可用工具列表"""
-        return [
-            {
-                "name": "now",
-                "description": "Time - now 操作",
-                "parameters": {}
-            },
-            {
-                "name": "format",
-                "description": "Time - format 操作",
-                "parameters": {}
-            },
-            {
-                "name": "parse",
-                "description": "Time - parse 操作",
-                "parameters": {}
-            },
-            {
-                "name": "timezone",
-                "description": "Time - timezone 操作",
-                "parameters": {}
-            }
-        ]
-        
-    async def call_tool(self, tool: str, params: Dict[str, Any]) -> Any:
-        """调用工具"""
-        if not self.initialized:
-            raise RuntimeError("Time not initialized")
-            
-        handler = getattr(self, f"_tool_{tool}", None)
-        if not handler:
-            raise ValueError(f"Unknown tool: {tool}")
-            
-        return await handler(params)
-        
-    async def _tool_now(self, params: dict) -> dict:
-        """now 操作"""
-        # TODO: 实现 now 逻辑
-        return {"status": "not_implemented", "tool": "now", "params": params}
+class ParseRequest(BaseModel):
+    datetime_str: str
+    format: str = "%Y-%m-%d %H:%M:%S"
+    timezone: str = "UTC"
 
-    async def _tool_format(self, params: dict) -> dict:
-        """format 操作"""
-        # TODO: 实现 format 逻辑
-        return {"status": "not_implemented", "tool": "format", "params": params}
-
-    async def _tool_parse(self, params: dict) -> dict:
-        """parse 操作"""
-        # TODO: 实现 parse 逻辑
-        return {"status": "not_implemented", "tool": "parse", "params": params}
-
-    async def _tool_timezone(self, params: dict) -> dict:
-        """timezone 操作"""
-        # TODO: 实现 timezone 逻辑
-        return {"status": "not_implemented", "tool": "timezone", "params": params}
-
-
-# =============================================================================
-# Global Instance
-# =============================================================================
-
-tools = TimeTools()
-
-# =============================================================================
-# API Endpoints
-# =============================================================================
+class ConvertRequest(BaseModel):
+    timestamp: float
+    from_tz: str = "UTC"
+    to_tz: str = "UTC"
 
 @app.get("/health")
 async def health():
-    """健康检查"""
-    return {
-        "status": "healthy" if tools.initialized else "degraded",
-        "node_id": "23",
-        "name": "Time",
-        "initialized": tools.initialized,
-        "timestamp": datetime.now().isoformat()
-    }
+    return {"status": "healthy", "node_id": "23", "name": "Time", "pytz_available": pytz is not None, "timestamp": datetime.now().isoformat()}
 
-@app.get("/tools")
-async def list_tools():
-    """列出可用工具"""
-    return {"tools": tools.get_tools()}
+@app.get("/now")
+async def get_now(timezone: str = "UTC", format: str = "%Y-%m-%d %H:%M:%S"):
+    now = datetime.utcnow()
+    if pytz and timezone != "UTC":
+        try:
+            tz = pytz.timezone(timezone)
+            now = datetime.now(tz)
+        except:
+            pass
+    return {"success": True, "timestamp": now.timestamp(), "formatted": now.strftime(format), "timezone": timezone, "iso": now.isoformat()}
 
-@app.post("/mcp/call")
-async def mcp_call(request: Dict[str, Any]):
-    """MCP 工具调用接口"""
-    tool = request.get("tool", "")
-    params = request.get("params", {})
+@app.post("/format")
+async def format_time(request: FormatRequest):
+    ts = request.timestamp or datetime.utcnow().timestamp()
+    dt = datetime.fromtimestamp(ts)
+    
+    if pytz and request.timezone != "UTC":
+        try:
+            tz = pytz.timezone(request.timezone)
+            dt = datetime.fromtimestamp(ts, tz)
+        except:
+            pass
+    
+    return {"success": True, "formatted": dt.strftime(request.format), "timestamp": ts}
+
+@app.post("/parse")
+async def parse_time(request: ParseRequest):
+    try:
+        dt = datetime.strptime(request.datetime_str, request.format)
+        
+        if pytz and request.timezone != "UTC":
+            try:
+                tz = pytz.timezone(request.timezone)
+                dt = tz.localize(dt)
+            except:
+                pass
+        
+        return {"success": True, "timestamp": dt.timestamp(), "iso": dt.isoformat()}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/convert")
+async def convert_timezone(request: ConvertRequest):
+    if not pytz:
+        return {"success": False, "error": "pytz not installed"}
     
     try:
-        result = await tools.call_tool(tool, params)
-        return {"success": True, "result": result}
+        from_tz = pytz.timezone(request.from_tz)
+        to_tz = pytz.timezone(request.to_tz)
+        
+        dt = datetime.fromtimestamp(request.timestamp, from_tz)
+        converted = dt.astimezone(to_tz)
+        
+        return {"success": True, "original": dt.isoformat(), "converted": converted.isoformat(), "timestamp": converted.timestamp()}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"success": False, "error": str(e)}
 
-# =============================================================================
-# Main
-# =============================================================================
+@app.get("/timezones")
+async def list_timezones():
+    if pytz:
+        return {"success": True, "timezones": list(pytz.all_timezones)[:100], "total": len(pytz.all_timezones)}
+    return {"success": True, "timezones": ["UTC", "US/Eastern", "US/Pacific", "Europe/London", "Asia/Shanghai", "Asia/Tokyo"]}
+
+@app.post("/mcp/call")
+async def mcp_call(request: dict):
+    tool = request.get("tool", "")
+    params = request.get("params", {})
+    if tool == "now": return await get_now(params.get("timezone", "UTC"), params.get("format", "%Y-%m-%d %H:%M:%S"))
+    elif tool == "format": return await format_time(FormatRequest(**params))
+    elif tool == "parse": return await parse_time(ParseRequest(**params))
+    elif tool == "convert": return await convert_timezone(ConvertRequest(**params))
+    elif tool == "timezones": return await list_timezones()
+    raise HTTPException(status_code=400, detail=f"Unknown tool: {tool}")
 
 if __name__ == "__main__":
     import uvicorn
