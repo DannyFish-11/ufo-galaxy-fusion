@@ -1,0 +1,12 @@
+{
+  "total": 5,
+  "passed": 5,
+  "failed": 0,
+  "details": {
+    "NLU 引擎": "passed",
+    "任务编排器": "passed",
+    "Windows UI 桥接器": "passed",
+    "Android 项目": "passed",
+    "微软 UFO 集成": "passed"
+  }
+}

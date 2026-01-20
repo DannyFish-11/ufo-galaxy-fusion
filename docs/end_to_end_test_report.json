@@ -1,0 +1,23 @@
+{
+  "total_scenarios": 4,
+  "passed": 4,
+  "failed": 0,
+  "details": [
+    {
+      "scenario": "场景 1: 简单软件操作",
+      "status": "success"
+    },
+    {
+      "scenario": "场景 2: 手机操作",
+      "status": "success"
+    },
+    {
+      "scenario": "场景 3: 跨设备协同",
+      "status": "success"
+    },
+    {
+      "scenario": "场景 4: 媒体生成",
+      "status": "success"
+    }
+  ]
+}
