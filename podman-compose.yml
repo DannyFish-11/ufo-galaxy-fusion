@@ -327,3 +327,57 @@ services:
     build: ./nodes/Node_49_OctoPrint
     ports: ["8049:8049"]
     networks: [net_phys]
+
+  # ========== LAYER 4: INTELLIGENCE (8070+) ==========
+  
+  # Node 70: Bambu Lab 3D Printer
+  node-70:
+    build: ./nodes/Node_70_BambuLab
+    container_name: ufo_node_70
+    ports:
+      - "8070:8070"
+    networks:
+      - net_phys
+    restart: unless-stopped
+
+  # Node 71: PixVerse Media Generation
+  node-71:
+    build: ./nodes/Node_71_MediaGen
+    container_name: ufo_node_71
+    ports:
+      - "8071:8071"
+    networks:
+      - net_tools
+    restart: unless-stopped
+
+  # Node 72: Knowledge Base (RAG)
+  node-72:
+    build: ./nodes/Node_72_KnowledgeBase
+    container_name: ufo_node_72
+    ports:
+      - "8072:8072"
+    networks:
+      - net_gateway
+    volumes:
+      - qdrant_data:/app/knowledge_db
+    restart: unless-stopped
+
+  # Node 73: Self Learning System
+  node-73:
+    build: ./nodes/Node_73_Learning
+    container_name: ufo_node_73
+    ports:
+      - "8073:8073"
+    networks:
+      - net_gateway
+    restart: unless-stopped
+
+  # Node 74: Digital Twin (51World)
+  node-74:
+    build: ./nodes/Node_74_DigitalTwin
+    container_name: ufo_node_74
+    ports:
+      - "8074:8074"
+    networks:
+      - net_gateway
+    restart: unless-stopped
