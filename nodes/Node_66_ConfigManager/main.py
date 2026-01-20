@@ -1,42 +1,70 @@
-"""Node 66: ConfigManager - 配置管理"""
-import os
+import os, json
 from datetime import datetime
+from typing import Optional, Dict, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-app = FastAPI(title="Node 66 - ConfigManager", version="1.0.0")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app = FastAPI(title='Node 66 - ConfigManager', version='2.0.0')
+app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_credentials=True, allow_methods=['*'], allow_headers=['*'])
 
-class ConfigManagerTools:
-    def __init__(self):
-        self.initialized = True
-    def get_tools(self):
-        return [{"name": "get_config", "description": "获取配置", "parameters": {'key': '配置项'}}]
-    async def call_tool(self, tool: str, params: dict):
-        handler = getattr(self, f"_tool_{tool}", None)
-        if not handler:
-            raise ValueError(f"Unknown tool: {tool}")
-        return await handler(params)
-    async def _tool_get_config(self, params):
-        return {"success": True, "message": "功能实现中 (演示模式)"}
+CONFIG_FILE = os.getenv('CONFIG_FILE', '/tmp/galaxy_config.json')
+config: Dict[str, Any] = {}
 
-tools = ConfigManagerTools()
+def load_config():
+    global config
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, 'r') as f:
+            config = json.load(f)
 
-@app.get("/health")
+def save_config():
+    with open(CONFIG_FILE, 'w') as f:
+        json.dump(config, f, indent=2)
+
+load_config()
+
+class ConfigRequest(BaseModel):
+    key: str
+    value: Optional[Any] = None
+
+@app.get('/health')
 async def health():
-    return {"status": "healthy", "node_id": "66", "name": "ConfigManager", "timestamp": datetime.now().isoformat()}
+    return {'status': 'healthy', 'node_id': '66', 'name': 'ConfigManager', 'config_count': len(config)}
 
-@app.get("/tools")
-async def list_tools():
-    return {"tools": tools.get_tools()}
+@app.post('/set')
+async def set_config(request: ConfigRequest):
+    config[request.key] = request.value
+    save_config()
+    return {'success': True, 'key': request.key, 'value': request.value}
 
-@app.post("/mcp/call")
+@app.get('/get/{key}')
+async def get_config(key: str):
+    if key not in config:
+        raise HTTPException(status_code=404, detail='Config not found')
+    return {'success': True, 'key': key, 'value': config[key]}
+
+@app.get('/all')
+async def get_all():
+    return {'success': True, 'config': config}
+
+@app.delete('/delete/{key}')
+async def delete_config(key: str):
+    if key not in config:
+        raise HTTPException(status_code=404, detail='Config not found')
+    del config[key]
+    save_config()
+    return {'success': True, 'key': key}
+
+@app.post('/mcp/call')
 async def mcp_call(request: dict):
-    try:
-        return {"success": True, "result": await tools.call_tool(request.get("tool"), request.get("params", {}))}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    tool = request.get('tool', '')
+    params = request.get('params', {})
+    if tool == 'set': return await set_config(ConfigRequest(**params))
+    elif tool == 'get': return await get_config(params.get('key'))
+    elif tool == 'all': return await get_all()
+    elif tool == 'delete': return await delete_config(params.get('key'))
+    raise HTTPException(status_code=400, detail=f'Unknown tool: {tool}')
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8066)
+    uvicorn.run(app, host='0.0.0.0', port=8066)

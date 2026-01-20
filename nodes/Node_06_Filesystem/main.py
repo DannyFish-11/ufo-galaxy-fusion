@@ -1,42 +1,82 @@
-"""Node 06: Filesystem - 文件系统"""
-import os
+import os, shutil, glob
 from datetime import datetime
+from typing import Optional, List
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-app = FastAPI(title="Node 06 - Filesystem", version="1.0.0")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app = FastAPI(title='Node 06 - Filesystem', version='2.0.0')
+app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_credentials=True, allow_methods=['*'], allow_headers=['*'])
 
-class FilesystemTools:
-    def __init__(self):
-        self.initialized = True
-    def get_tools(self):
-        return [{"name": "read_file", "description": "读取文件", "parameters": {'path': '路径'}}]
-    async def call_tool(self, tool: str, params: dict):
-        handler = getattr(self, f"_tool_{tool}", None)
-        if not handler:
-            raise ValueError(f"Unknown tool: {tool}")
-        return await handler(params)
-    async def _tool_read_file(self, params):
-        return {"success": True, "message": "功能实现中 (演示模式)"}
+ALLOWED_PATHS = os.getenv('ALLOWED_PATHS', '/tmp,/home').split(',')
 
-tools = FilesystemTools()
+def is_allowed(path: str) -> bool:
+    abs_path = os.path.abspath(path)
+    return any(abs_path.startswith(p) for p in ALLOWED_PATHS)
 
-@app.get("/health")
+class FileRequest(BaseModel):
+    path: str
+    content: Optional[str] = None
+    dest: Optional[str] = None
+
+@app.get('/health')
 async def health():
-    return {"status": "healthy", "node_id": "06", "name": "Filesystem", "timestamp": datetime.now().isoformat()}
+    return {'status': 'healthy', 'node_id': '06', 'name': 'Filesystem', 'allowed_paths': ALLOWED_PATHS}
 
-@app.get("/tools")
-async def list_tools():
-    return {"tools": tools.get_tools()}
+@app.post('/read')
+async def read_file(request: FileRequest):
+    if not is_allowed(request.path):
+        raise HTTPException(status_code=403, detail='Path not allowed')
+    if not os.path.exists(request.path):
+        raise HTTPException(status_code=404, detail='File not found')
+    with open(request.path, 'r') as f:
+        return {'success': True, 'content': f.read()}
 
-@app.post("/mcp/call")
+@app.post('/write')
+async def write_file(request: FileRequest):
+    if not is_allowed(request.path):
+        raise HTTPException(status_code=403, detail='Path not allowed')
+    os.makedirs(os.path.dirname(request.path) or '.', exist_ok=True)
+    with open(request.path, 'w') as f:
+        f.write(request.content or '')
+    return {'success': True, 'path': request.path}
+
+@app.post('/copy')
+async def copy_file(request: FileRequest):
+    if not is_allowed(request.path) or not is_allowed(request.dest):
+        raise HTTPException(status_code=403, detail='Path not allowed')
+    shutil.copy2(request.path, request.dest)
+    return {'success': True, 'src': request.path, 'dest': request.dest}
+
+@app.post('/move')
+async def move_file(request: FileRequest):
+    if not is_allowed(request.path) or not is_allowed(request.dest):
+        raise HTTPException(status_code=403, detail='Path not allowed')
+    shutil.move(request.path, request.dest)
+    return {'success': True, 'src': request.path, 'dest': request.dest}
+
+@app.get('/list')
+async def list_dir(path: str, pattern: str = '*'):
+    if not is_allowed(path):
+        raise HTTPException(status_code=403, detail='Path not allowed')
+    files = glob.glob(os.path.join(path, pattern))
+    result = []
+    for f in files:
+        stat = os.stat(f)
+        result.append({'name': os.path.basename(f), 'path': f, 'size': stat.st_size, 'is_dir': os.path.isdir(f)})
+    return {'success': True, 'files': result}
+
+@app.post('/mcp/call')
 async def mcp_call(request: dict):
-    try:
-        return {"success": True, "result": await tools.call_tool(request.get("tool"), request.get("params", {}))}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    tool = request.get('tool', '')
+    params = request.get('params', {})
+    if tool == 'read': return await read_file(FileRequest(**params))
+    elif tool == 'write': return await write_file(FileRequest(**params))
+    elif tool == 'copy': return await copy_file(FileRequest(**params))
+    elif tool == 'move': return await move_file(FileRequest(**params))
+    elif tool == 'list': return await list_dir(params.get('path'), params.get('pattern', '*'))
+    raise HTTPException(status_code=400, detail=f'Unknown tool: {tool}')
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8006)
+    uvicorn.run(app, host='0.0.0.0', port=8006)

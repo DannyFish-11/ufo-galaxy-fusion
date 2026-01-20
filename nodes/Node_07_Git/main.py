@@ -1,42 +1,66 @@
-"""Node 07: Git - Git 操作"""
-import os
+import os, subprocess
 from datetime import datetime
+from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-app = FastAPI(title="Node 07 - Git", version="1.0.0")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app = FastAPI(title='Node 07 - Git', version='2.0.0')
+app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_credentials=True, allow_methods=['*'], allow_headers=['*'])
 
-class GitTools:
-    def __init__(self):
-        self.initialized = True
-    def get_tools(self):
-        return [{"name": "clone", "description": "克隆仓库", "parameters": {'url': '仓库URL'}}]
-    async def call_tool(self, tool: str, params: dict):
-        handler = getattr(self, f"_tool_{tool}", None)
-        if not handler:
-            raise ValueError(f"Unknown tool: {tool}")
-        return await handler(params)
-    async def _tool_clone(self, params):
-        return {"success": True, "message": "功能实现中 (演示模式)"}
+class GitRequest(BaseModel):
+    repo_path: str
+    command: Optional[str] = None
+    url: Optional[str] = None
+    message: Optional[str] = None
+    branch: Optional[str] = None
 
-tools = GitTools()
-
-@app.get("/health")
-async def health():
-    return {"status": "healthy", "node_id": "07", "name": "Git", "timestamp": datetime.now().isoformat()}
-
-@app.get("/tools")
-async def list_tools():
-    return {"tools": tools.get_tools()}
-
-@app.post("/mcp/call")
-async def mcp_call(request: dict):
+def run_git(repo_path: str, args: list) -> dict:
     try:
-        return {"success": True, "result": await tools.call_tool(request.get("tool"), request.get("params", {}))}
+        result = subprocess.run(['git'] + args, cwd=repo_path, capture_output=True, text=True, timeout=60)
+        return {'success': result.returncode == 0, 'output': result.stdout, 'error': result.stderr}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {'success': False, 'error': str(e)}
 
-if __name__ == "__main__":
+@app.get('/health')
+async def health():
+    return {'status': 'healthy', 'node_id': '07', 'name': 'Git'}
+
+@app.post('/clone')
+async def clone(url: str, path: str):
+    result = subprocess.run(['git', 'clone', url, path], capture_output=True, text=True, timeout=300)
+    return {'success': result.returncode == 0, 'path': path, 'output': result.stdout, 'error': result.stderr}
+
+@app.post('/status')
+async def status(request: GitRequest):
+    return run_git(request.repo_path, ['status'])
+
+@app.post('/pull')
+async def pull(request: GitRequest):
+    return run_git(request.repo_path, ['pull'])
+
+@app.post('/push')
+async def push(request: GitRequest):
+    return run_git(request.repo_path, ['push'])
+
+@app.post('/commit')
+async def commit(request: GitRequest):
+    if not request.message:
+        raise HTTPException(status_code=400, detail='message required')
+    run_git(request.repo_path, ['add', '-A'])
+    return run_git(request.repo_path, ['commit', '-m', request.message])
+
+@app.post('/mcp/call')
+async def mcp_call(request: dict):
+    tool = request.get('tool', '')
+    params = request.get('params', {})
+    if tool == 'clone': return await clone(params.get('url'), params.get('path'))
+    elif tool == 'status': return await status(GitRequest(**params))
+    elif tool == 'pull': return await pull(GitRequest(**params))
+    elif tool == 'push': return await push(GitRequest(**params))
+    elif tool == 'commit': return await commit(GitRequest(**params))
+    raise HTTPException(status_code=400, detail=f'Unknown tool: {tool}')
+
+if __name__ == '__main__':
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8007)
+    uvicorn.run(app, host='0.0.0.0', port=8007)

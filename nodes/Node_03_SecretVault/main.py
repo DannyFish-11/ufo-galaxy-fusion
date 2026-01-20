@@ -1,42 +1,79 @@
-"""Node 03: SecretVault - 密钥管理"""
-import os
+import os, json, base64, hashlib
 from datetime import datetime
+from typing import Optional, Dict, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-app = FastAPI(title="Node 03 - SecretVault", version="1.0.0")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app = FastAPI(title='Node 03 - SecretVault', version='2.0.0')
+app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_credentials=True, allow_methods=['*'], allow_headers=['*'])
 
-class SecretVaultTools:
-    def __init__(self):
-        self.initialized = True
-    def get_tools(self):
-        return [{"name": "get_secret", "description": "获取密钥", "parameters": {'key': '密钥名'}}]
-    async def call_tool(self, tool: str, params: dict):
-        handler = getattr(self, f"_tool_{tool}", None)
-        if not handler:
-            raise ValueError(f"Unknown tool: {tool}")
-        return await handler(params)
-    async def _tool_get_secret(self, params):
-        return {"success": True, "message": "功能实现中 (演示模式)"}
+VAULT_FILE = os.getenv('VAULT_FILE', '/tmp/vault.enc')
+VAULT_KEY = os.getenv('VAULT_KEY', 'default_key_change_me')
+secrets: Dict[str, str] = {}
 
-tools = SecretVaultTools()
+def encrypt(data: str) -> str:
+    return base64.b64encode(data.encode()).decode()
 
-@app.get("/health")
+def decrypt(data: str) -> str:
+    return base64.b64decode(data.encode()).decode()
+
+def load_vault():
+    global secrets
+    if os.path.exists(VAULT_FILE):
+        with open(VAULT_FILE, 'r') as f:
+            secrets = json.load(f)
+
+def save_vault():
+    with open(VAULT_FILE, 'w') as f:
+        json.dump(secrets, f)
+
+load_vault()
+
+class SecretRequest(BaseModel):
+    key: str
+    value: Optional[str] = None
+
+@app.get('/health')
 async def health():
-    return {"status": "healthy", "node_id": "03", "name": "SecretVault", "timestamp": datetime.now().isoformat()}
+    return {'status': 'healthy', 'node_id': '03', 'name': 'SecretVault', 'secret_count': len(secrets)}
 
-@app.get("/tools")
-async def list_tools():
-    return {"tools": tools.get_tools()}
+@app.post('/set')
+async def set_secret(request: SecretRequest):
+    if not request.value:
+        raise HTTPException(status_code=400, detail='value required')
+    secrets[request.key] = encrypt(request.value)
+    save_vault()
+    return {'success': True, 'key': request.key}
 
-@app.post("/mcp/call")
+@app.get('/get/{key}')
+async def get_secret(key: str):
+    if key not in secrets:
+        raise HTTPException(status_code=404, detail='Secret not found')
+    return {'success': True, 'key': key, 'value': decrypt(secrets[key])}
+
+@app.delete('/delete/{key}')
+async def delete_secret(key: str):
+    if key not in secrets:
+        raise HTTPException(status_code=404, detail='Secret not found')
+    del secrets[key]
+    save_vault()
+    return {'success': True, 'key': key}
+
+@app.get('/list')
+async def list_secrets():
+    return {'success': True, 'keys': list(secrets.keys())}
+
+@app.post('/mcp/call')
 async def mcp_call(request: dict):
-    try:
-        return {"success": True, "result": await tools.call_tool(request.get("tool"), request.get("params", {}))}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    tool = request.get('tool', '')
+    params = request.get('params', {})
+    if tool == 'set': return await set_secret(SecretRequest(**params))
+    elif tool == 'get': return await get_secret(params.get('key'))
+    elif tool == 'delete': return await delete_secret(params.get('key'))
+    elif tool == 'list': return await list_secrets()
+    raise HTTPException(status_code=400, detail=f'Unknown tool: {tool}')
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8003)
+    uvicorn.run(app, host='0.0.0.0', port=8003)
