@@ -1,5 +1,5 @@
 """
-UFO³ Galaxy 数字孪生推演模块 - Node 54
+UFO³ Galaxy 数字孪生推演模块 - Node 74
 
 集成 51World 数字孪生平台，实现：
 1. 任务预演和仿真
@@ -8,6 +8,10 @@ UFO³ Galaxy 数字孪生推演模块 - Node 54
 4. 虚拟环境测试
 5. 风险评估
 
+注意：51World 使用 JavaScript SDK，需要通过 Node.js 桥接服务或浏览器自动化
+
+官方文档: https://wdpapi.51aes.com/
+
 作者：Manus AI
 日期：2025-01-20
 """
@@ -15,9 +19,12 @@ UFO³ Galaxy 数字孪生推演模块 - Node 54
 import json
 import time
 import asyncio
+import subprocess
+import os
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, asdict
 from enum import Enum
+from pathlib import Path
 
 class SimulationType(Enum):
     """仿真类型"""
@@ -46,20 +53,42 @@ class SimulationResult:
     data: Dict[str, Any]  # 详细数据
 
 class DigitalTwinSimulator:
-    """数字孪生仿真器"""
+    """
+    数字孪生仿真器
     
-    def __init__(self, api_endpoint: str = "https://api.51world.com"):
+    51World 集成方案：
+    1. 演示模式：使用本地算法模拟（当前实现）
+    2. Node.js 桥接：通过 Node.js 服务调用 51World JavaScript SDK
+    3. 浏览器自动化：使用 Selenium/Playwright 控制浏览器中的 51World 场景
+    
+    当前状态：演示模式（适用于极客松演示）
+    """
+    
+    def __init__(self, mode: str = "demo", nodejs_bridge_url: str = None):
         """
         初始化仿真器
         
         Args:
-            api_endpoint: 51World API 端点
+            mode: 运行模式 ("demo", "nodejs", "browser")
+            nodejs_bridge_url: Node.js 桥接服务的 URL（如果使用 nodejs 模式）
         """
-        self.api_endpoint = api_endpoint
+        self.mode = mode
+        self.nodejs_bridge_url = nodejs_bridge_url
         self.simulations: Dict[str, SimulationResult] = {}
         
-        print(f"数字孪生仿真器已初始化")
-        print(f"API 端点: {api_endpoint}")
+        if mode == "demo":
+            print(f"✅ 数字孪生仿真器已初始化（演示模式）")
+            print(f"💡 提示：当前使用本地算法模拟，如需真实 51World 集成，请使用 'nodejs' 或 'browser' 模式")
+        elif mode == "nodejs":
+            if not nodejs_bridge_url:
+                raise ValueError("nodejs 模式需要提供 nodejs_bridge_url")
+            print(f"✅ 数字孪生仿真器已初始化（Node.js 桥接模式）")
+            print(f"🌐 桥接服务: {nodejs_bridge_url}")
+        elif mode == "browser":
+            print(f"✅ 数字孪生仿真器已初始化（浏览器自动化模式）")
+            print(f"🌐 将使用 Selenium/Playwright 控制 51World")
+        else:
+            raise ValueError(f"不支持的模式: {mode}")
     
     async def simulate_drone_flight(
         self,
@@ -70,8 +99,8 @@ class DigitalTwinSimulator:
         模拟无人机飞行
         
         Args:
-            waypoints: 航点列表
-            weather: 天气条件
+            waypoints: 航点列表，格式: [{"latitude": 39.9, "longitude": 116.4, "altitude": 100}, ...]
+            weather: 天气条件，格式: {"wind_speed": 5, "temperature": 25, "visibility": 10}
         
         Returns:
             仿真结果
@@ -80,8 +109,23 @@ class DigitalTwinSimulator:
         
         print(f"\n🚁 开始模拟无人机飞行: {simulation_id}")
         print(f"航点数量: {len(waypoints)}")
+        print(f"模式: {self.mode}")
         
-        # 模拟飞行过程
+        if self.mode == "demo":
+            return await self._simulate_drone_flight_demo(simulation_id, waypoints, weather)
+        elif self.mode == "nodejs":
+            return await self._simulate_drone_flight_nodejs(simulation_id, waypoints, weather)
+        elif self.mode == "browser":
+            return await self._simulate_drone_flight_browser(simulation_id, waypoints, weather)
+    
+    async def _simulate_drone_flight_demo(
+        self,
+        simulation_id: str,
+        waypoints: List[Dict[str, float]],
+        weather: Dict[str, Any]
+    ) -> SimulationResult:
+        """演示模式：使用本地算法模拟"""
+        start_time = time.time()
         warnings = []
         recommendations = []
         
@@ -90,63 +134,102 @@ class DigitalTwinSimulator:
             p1 = waypoints[i]
             p2 = waypoints[i + 1]
             
-            # 简化的距离计算
+            # 简化的距离计算（单位：度）
             distance = ((p2["latitude"] - p1["latitude"])**2 + 
                        (p2["longitude"] - p1["longitude"])**2)**0.5
             
-            if distance > 0.01:  # 假设的阈值
-                warnings.append(f"航点 {i} 到 {i+1} 距离较远，建议增加中间航点")
+            if distance > 0.01:  # 约 1 公里
+                warnings.append(f"航点 {i} 到 {i+1} 距离较远（{distance*111:.1f}km），建议增加中间航点")
         
         # 检查天气条件
         if weather:
             wind_speed = weather.get("wind_speed", 0)
             if wind_speed > 10:
-                warnings.append(f"风速 {wind_speed} m/s 较大，建议降低飞行高度")
-                recommendations.append("建议将飞行高度降低 20%")
+                warnings.append(f"风速较大（{wind_speed}m/s），飞行风险增加")
+                recommendations.append("建议降低飞行高度或推迟飞行")
+            
+            visibility = weather.get("visibility", 10)
+            if visibility < 5:
+                warnings.append(f"能见度较低（{visibility}km）")
+                recommendations.append("建议使用 GPS 导航，避免视觉飞行")
         
-        # 计算成功率
-        success_rate = 95.0 if len(warnings) == 0 else 85.0
+        # 计算飞行时间和能耗
+        total_distance = sum(
+            ((waypoints[i+1]["latitude"] - waypoints[i]["latitude"])**2 + 
+             (waypoints[i+1]["longitude"] - waypoints[i]["longitude"])**2)**0.5 * 111
+            for i in range(len(waypoints) - 1)
+        )
         
-        # 模拟耗时
+        flight_time = total_distance / 15  # 假设平均速度 15 m/s
+        battery_consumption = flight_time * 2  # 假设每秒消耗 2% 电量
+        
+        # 模拟执行时间
         await asyncio.sleep(2)
+        
+        duration = time.time() - start_time
+        success_rate = 95.0 if not warnings else 85.0
         
         result = SimulationResult(
             simulation_id=simulation_id,
             type=SimulationType.DRONE_FLIGHT,
             status=SimulationStatus.COMPLETED,
-            duration=2.0,
+            duration=duration,
             success_rate=success_rate,
             warnings=warnings,
             recommendations=recommendations,
             data={
-                "total_distance": len(waypoints) * 100,  # 模拟数据
-                "estimated_flight_time": len(waypoints) * 60,
-                "battery_consumption": len(waypoints) * 5,
-                "waypoints": waypoints
+                "waypoints_count": len(waypoints),
+                "total_distance_km": round(total_distance, 2),
+                "estimated_flight_time_sec": round(flight_time, 1),
+                "estimated_battery_consumption_percent": round(battery_consumption, 1),
+                "weather": weather,
+                "mode": "demo"
             }
         )
         
         self.simulations[simulation_id] = result
-        
-        print(f"✅ 飞行模拟完成")
-        print(f"成功率: {success_rate}%")
-        print(f"警告数量: {len(warnings)}")
-        
+        print(f"✅ 仿真完成，成功率: {success_rate}%")
         return result
+    
+    async def _simulate_drone_flight_nodejs(
+        self,
+        simulation_id: str,
+        waypoints: List[Dict[str, float]],
+        weather: Dict[str, Any]
+    ) -> SimulationResult:
+        """Node.js 桥接模式：调用 51World JavaScript SDK"""
+        # TODO: 实现 Node.js 桥接
+        print("⚠️ Node.js 桥接模式尚未实现，请先部署 Node.js 桥接服务")
+        print("📖 参考文档: /app/docs/51world_nodejs_bridge_guide.md")
+        
+        # 暂时返回演示结果
+        return await self._simulate_drone_flight_demo(simulation_id, waypoints, weather)
+    
+    async def _simulate_drone_flight_browser(
+        self,
+        simulation_id: str,
+        waypoints: List[Dict[str, float]],
+        weather: Dict[str, Any]
+    ) -> SimulationResult:
+        """浏览器自动化模式：使用 Selenium/Playwright 控制 51World"""
+        # TODO: 实现浏览器自动化
+        print("⚠️ 浏览器自动化模式尚未实现")
+        print("📖 参考文档: /app/docs/51world_browser_automation_guide.md")
+        
+        # 暂时返回演示结果
+        return await self._simulate_drone_flight_demo(simulation_id, waypoints, weather)
     
     async def simulate_3d_print(
         self,
         model_file: str,
-        material: str,
-        temperature: float
+        printer_config: Dict[str, Any]
     ) -> SimulationResult:
         """
         模拟 3D 打印过程
         
         Args:
-            model_file: 模型文件路径
-            material: 材料类型
-            temperature: 打印温度
+            model_file: 3D 模型文件路径（STL/GCODE）
+            printer_config: 打印机配置
         
         Returns:
             仿真结果
@@ -154,165 +237,97 @@ class DigitalTwinSimulator:
         simulation_id = f"print_sim_{int(time.time())}"
         
         print(f"\n🖨️ 开始模拟 3D 打印: {simulation_id}")
-        print(f"模型: {model_file}")
-        print(f"材料: {material}")
-        print(f"温度: {temperature}°C")
+        print(f"模型文件: {model_file}")
+        print(f"模式: {self.mode}")
         
+        start_time = time.time()
         warnings = []
         recommendations = []
         
-        # 检查温度
-        if material == "PLA":
-            if temperature < 190 or temperature > 230:
-                warnings.append(f"PLA 材料的推荐温度范围是 190-230°C，当前温度 {temperature}°C")
-                recommendations.append("建议将温度调整到 210-220°C")
-        elif material == "ABS":
-            if temperature < 220 or temperature > 260:
-                warnings.append(f"ABS 材料的推荐温度范围是 220-260°C，当前温度 {temperature}°C")
-                recommendations.append("建议将温度调整到 240-250°C")
+        # 检查打印参数
+        nozzle_temp = printer_config.get("nozzle_temp", 200)
+        bed_temp = printer_config.get("bed_temp", 60)
+        print_speed = printer_config.get("print_speed", 50)
         
-        # 模拟打印过程
+        if nozzle_temp > 250:
+            warnings.append(f"喷嘴温度过高（{nozzle_temp}°C）")
+            recommendations.append("建议降低温度或使用耐高温材料")
+        
+        if bed_temp < 50:
+            warnings.append(f"热床温度较低（{bed_temp}°C）")
+            recommendations.append("建议提高热床温度以改善附着力")
+        
+        if print_speed > 80:
+            warnings.append(f"打印速度过快（{print_speed}mm/s）")
+            recommendations.append("建议降低速度以提高打印质量")
+        
+        # 模拟执行时间
         await asyncio.sleep(1.5)
         
-        # 计算成功率
-        success_rate = 90.0 if len(warnings) == 0 else 75.0
+        duration = time.time() - start_time
+        success_rate = 90.0 if not warnings else 75.0
         
         result = SimulationResult(
             simulation_id=simulation_id,
             type=SimulationType.PRINT_3D,
             status=SimulationStatus.COMPLETED,
-            duration=1.5,
+            duration=duration,
             success_rate=success_rate,
             warnings=warnings,
             recommendations=recommendations,
             data={
-                "estimated_print_time": 7200,  # 2 小时
-                "material_usage": 150,  # 克
-                "layer_count": 267,
                 "model_file": model_file,
-                "material": material,
-                "temperature": temperature
+                "printer_config": printer_config,
+                "estimated_print_time_hours": 2.5,
+                "estimated_material_usage_g": 45.3,
+                "mode": self.mode
             }
         )
         
         self.simulations[simulation_id] = result
-        
-        print(f"✅ 打印模拟完成")
-        print(f"成功率: {success_rate}%")
-        print(f"预计打印时间: 2 小时")
-        
+        print(f"✅ 仿真完成，成功率: {success_rate}%")
         return result
     
-    async def simulate_environment(
-        self,
-        scene_config: Dict[str, Any]
-    ) -> SimulationResult:
-        """
-        模拟环境场景
-        
-        Args:
-            scene_config: 场景配置
-        
-        Returns:
-            仿真结果
-        """
-        simulation_id = f"env_sim_{int(time.time())}"
-        
-        print(f"\n🌍 开始模拟环境场景: {simulation_id}")
-        
-        # 模拟场景加载
-        await asyncio.sleep(1)
-        
-        result = SimulationResult(
-            simulation_id=simulation_id,
-            type=SimulationType.ENVIRONMENT,
-            status=SimulationStatus.COMPLETED,
-            duration=1.0,
-            success_rate=100.0,
-            warnings=[],
-            recommendations=[],
-            data={
-                "scene_config": scene_config,
-                "objects_count": scene_config.get("objects_count", 0),
-                "simulation_ready": True
-            }
-        )
-        
-        self.simulations[simulation_id] = result
-        
-        print(f"✅ 环境模拟完成")
-        
-        return result
-    
-    def get_simulation_result(self, simulation_id: str) -> Optional[SimulationResult]:
+    def get_simulation(self, simulation_id: str) -> Optional[SimulationResult]:
         """获取仿真结果"""
         return self.simulations.get(simulation_id)
     
     def get_all_simulations(self) -> List[SimulationResult]:
-        """获取所有仿真记录"""
+        """获取所有仿真结果"""
         return list(self.simulations.values())
-    
-    def export_simulation_report(self, simulation_id: str, output_file: str):
-        """导出仿真报告"""
-        result = self.get_simulation_result(simulation_id)
-        
-        if not result:
-            print(f"❌ 未找到仿真: {simulation_id}")
-            return
-        
-        report = {
-            "simulation_id": result.simulation_id,
-            "type": result.type.value,
-            "status": result.status.value,
-            "duration": result.duration,
-            "success_rate": result.success_rate,
-            "warnings": result.warnings,
-            "recommendations": result.recommendations,
-            "data": result.data,
-            "timestamp": time.time()
-        }
-        
-        with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(report, f, indent=2, ensure_ascii=False)
-        
-        print(f"✅ 仿真报告已导出到: {output_file}")
 
 # 使用示例
-async def main():
-    # 创建仿真器
-    simulator = DigitalTwinSimulator()
-    
-    # 1. 模拟无人机飞行
-    waypoints = [
-        {"latitude": 39.9042, "longitude": 116.4074, "altitude": 50},
-        {"latitude": 39.9052, "longitude": 116.4084, "altitude": 50},
-        {"latitude": 39.9062, "longitude": 116.4094, "altitude": 50},
-    ]
-    
-    drone_result = await simulator.simulate_drone_flight(
-        waypoints,
-        weather={"wind_speed": 5, "temperature": 25}
-    )
-    
-    # 2. 模拟 3D 打印
-    print_result = await simulator.simulate_3d_print(
-        model_file="vase.stl",
-        material="PLA",
-        temperature=220
-    )
-    
-    # 3. 模拟环境
-    env_result = await simulator.simulate_environment({
-        "scene_type": "indoor",
-        "objects_count": 10,
-        "lighting": "natural"
-    })
-    
-    # 导出报告
-    simulator.export_simulation_report(
-        drone_result.simulation_id,
-        "/tmp/drone_simulation_report.json"
-    )
-
 if __name__ == "__main__":
+    async def main():
+        # 创建仿真器（演示模式）
+        simulator = DigitalTwinSimulator(mode="demo")
+        
+        # 测试无人机飞行仿真
+        waypoints = [
+            {"latitude": 39.9, "longitude": 116.4, "altitude": 100},
+            {"latitude": 39.91, "longitude": 116.41, "altitude": 120},
+            {"latitude": 39.92, "longitude": 116.42, "altitude": 100}
+        ]
+        
+        weather = {
+            "wind_speed": 8,
+            "temperature": 25,
+            "visibility": 10
+        }
+        
+        result = await simulator.simulate_drone_flight(waypoints, weather)
+        print("\n📊 仿真结果:")
+        print(json.dumps(asdict(result), indent=2, ensure_ascii=False, default=str))
+        
+        # 测试 3D 打印仿真
+        printer_config = {
+            "nozzle_temp": 220,
+            "bed_temp": 60,
+            "print_speed": 50
+        }
+        
+        result2 = await simulator.simulate_3d_print("test_model.stl", printer_config)
+        print("\n📊 仿真结果:")
+        print(json.dumps(asdict(result2), indent=2, ensure_ascii=False, default=str))
+    
     asyncio.run(main())
