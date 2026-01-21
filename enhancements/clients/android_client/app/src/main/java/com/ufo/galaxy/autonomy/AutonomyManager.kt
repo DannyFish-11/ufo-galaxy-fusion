@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.util.Log
-import com.ufo.galaxy.api.GalaxyApiClient
+// import com.ufo.galaxy.api.GalaxyApiClient - 已移除
 import kotlinx.coroutines.*
 import org.json.JSONObject
 
@@ -41,9 +41,9 @@ class AutonomyManager(private val context: Context) {
     }
     
     /**
-     * 检查无障碍服务是否已启用
+     * 检查自主操纵能力是否已启用
      */
-    fun isAccessibilityServiceEnabled(): Boolean {
+    fun isEnabled(): Boolean {
         val service = AutonomyService.getInstance()
         return service != null && AutonomyService.isServiceAvailable()
     }
@@ -64,17 +64,17 @@ class AutonomyManager(private val context: Context) {
     /**
      * 获取当前 UI 树
      */
-    fun captureUITree(): JSONObject {
-        val service = AutonomyService.getInstance()
-        
-        if (service == null) {
-            return JSONObject().apply {
-                put("status", "error")
-                put("message", "自主操纵服务未启用")
+    suspend fun getUITree(): String {
+        return withContext(Dispatchers.IO) {
+            val service = AutonomyService.getInstance()
+            
+            if (service == null) {
+                return@withContext "错误: 自主操纵服务未启用"
             }
+            
+            val uiTree = service.captureUITree()
+            return@withContext uiTree.toString(2)
         }
-        
-        return service.captureUITree()
     }
     
     /**
@@ -89,6 +89,62 @@ class AutonomyManager(private val context: Context) {
      */
     fun executeActionSequence(actions: org.json.JSONArray): JSONObject {
         return actionExecutor.executeActionSequence(actions)
+    }
+    
+    /**
+     * 点击指定文本的元素
+     */
+    suspend fun clickByText(text: String): String {
+        return withContext(Dispatchers.IO) {
+            val action = JSONObject().apply {
+                put("type", "click")
+                put("text", text)
+            }
+            val result = executeAction(action)
+            return@withContext result.optString("message", "执行完成")
+        }
+    }
+    
+    /**
+     * 输入文本
+     */
+    suspend fun inputText(text: String): String {
+        return withContext(Dispatchers.IO) {
+            val action = JSONObject().apply {
+                put("type", "input")
+                put("text", text)
+            }
+            val result = executeAction(action)
+            return@withContext result.optString("message", "执行完成")
+        }
+    }
+    
+    /**
+     * 打开应用
+     */
+    suspend fun openApp(packageName: String): String {
+        return withContext(Dispatchers.IO) {
+            try {
+                val intent = context.packageManager.getLaunchIntentForPackage(packageName)
+                if (intent != null) {
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(intent)
+                    return@withContext "已打开应用: $packageName"
+                } else {
+                    return@withContext "错误: 未找到应用 $packageName"
+                }
+            } catch (e: Exception) {
+                return@withContext "错误: ${e.message}"
+            }
+        }
+    }
+    
+    /**
+     * 清理资源
+     */
+    fun cleanup() {
+        scope.cancel()
+        Log.i(TAG, "✅ 资源已清理")
     }
     
     /**
