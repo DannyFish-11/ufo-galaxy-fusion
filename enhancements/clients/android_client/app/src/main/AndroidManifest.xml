@@ -44,6 +44,20 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
         </service>
+        
+        <!-- UFO³ Galaxy 自主操纵服务 -->
+        <service
+            android:name="com.ufo.galaxy.autonomy.AutonomyService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true"
+            android:label="UFO³ Galaxy 自主操纵">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/autonomy_service_config" />
+        </service>
     </application>
 
 </manifest>

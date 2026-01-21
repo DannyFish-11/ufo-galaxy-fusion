@@ -6,7 +6,7 @@ UFO³ Galaxy Gateway - 超级网关
 import sys
 sys.path.append("/home/ubuntu/ufo-galaxy-check")
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Optional, Any
@@ -14,6 +14,9 @@ import uvicorn
 
 from shared.llm_client import UnifiedLLMClient, TaskType
 from shared.node_registry import NodeRegistry, NodeCategory, NodeInfo
+from websocket_handler import handle_websocket, connection_manager
+from device_router import device_router
+import uuid
 
 
 app = FastAPI(
@@ -382,8 +385,45 @@ async def get_stats():
     }
 
 
-# ===== 启动服务 =====
+## ===== WebSocket 端点 =====
 
+@app.websocket("/ws/agent")
+async def websocket_agent_endpoint(websocket: WebSocket):
+    """
+    Agent WebSocket 连接端点
+    用于 Android Agent 和其他设备连接
+    """
+    connection_id = str(uuid.uuid4())
+    await handle_websocket(websocket, connection_id)
+
+
+# ===== 设备管理 API =====
+
+@app.get("/api/devices")
+async def get_devices():
+    """获取所有设备状态"""
+    return device_router.get_device_status()
+
+
+@app.post("/api/command")
+async def send_command(request: Dict[str, Any]):
+    """
+    发送命令到设备
+    支持语音和文本命令
+    """
+    command = request.get("command", "")
+    context = request.get("context", {})
+    
+    if not command:
+        raise HTTPException(status_code=400, detail="命令不能为空")
+    
+    # 路由任务到合适的设备
+    result = await device_router.route_task(command, context)
+    
+    return result
+
+
+# ===== 启动服务 =====
 if __name__ == "__main__":
     uvicorn.run(
         app,
