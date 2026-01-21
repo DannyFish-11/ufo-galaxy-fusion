@@ -689,6 +689,103 @@ async def chat(request: ChatRequest):
     return response
 
 # =============================================================================
+# OpenAI Compatible API (for One-API integration)
+# =============================================================================
+
+class OpenAIMessage(BaseModel):
+    role: str
+    content: str
+
+class OpenAIRequest(BaseModel):
+    model: str = DEFAULT_MODEL
+    messages: List[OpenAIMessage]
+    max_tokens: Optional[int] = 2048
+    temperature: Optional[float] = 0.7
+    stream: Optional[bool] = False
+
+@app.post("/v1/chat/completions")
+async def openai_chat_completions(request: OpenAIRequest):
+    """
+    OpenAI 兼容 API - 用于 One-API 集成
+    
+    完全兼容 OpenAI Chat Completions API 格式
+    使 One-API 可以直接调用本地 LLM
+    """
+    try:
+        import time
+        
+        # 转换消息格式
+        chat_messages = [
+            ChatMessage(role=msg.role, content=msg.content)
+            for msg in request.messages
+        ]
+        
+        # 创建 ChatRequest
+        chat_request = ChatRequest(
+            messages=chat_messages,
+            model=request.model,
+            temperature=request.temperature,
+            max_tokens=request.max_tokens,
+            stream=False
+        )
+        
+        # 调用本地 LLM
+        result = await llm_service.chat(chat_request)
+        
+        # 返回 OpenAI 格式响应
+        return {
+            "id": f"chatcmpl-local-{int(time.time())}",
+            "object": "chat.completion",
+            "created": int(time.time()),
+            "model": result.model,
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": result.response
+                    },
+                    "finish_reason": "stop"
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 0,  # Ollama 不返回 token 计数
+                "completion_tokens": 0,
+                "total_tokens": 0
+            },
+            "system_fingerprint": "local-llm"
+        }
+    
+    except Exception as e:
+        logger.error(f"OpenAI API error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/v1/models")
+async def openai_list_models():
+    """
+    OpenAI 兼容 API - 列出可用模型
+    """
+    import time
+    
+    models = await llm_service.ollama.list_models()
+    
+    return {
+        "object": "list",
+        "data": [
+            {
+                "id": model.name,
+                "object": "model",
+                "created": int(time.time()),
+                "owned_by": "local",
+                "permission": [],
+                "root": model.name,
+                "parent": None
+            }
+            for model in models
+        ]
+    }
+
+# =============================================================================
 # Main
 # =============================================================================
 

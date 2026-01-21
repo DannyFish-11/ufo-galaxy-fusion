@@ -18,10 +18,18 @@ app = FastAPI(title="Node 01 - OneAPI Gateway", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 # ============ API 配置 (从环境变量读取) ============
+# 云端 LLM 提供商
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 ZHIPU_API_KEY = os.getenv("ZHIPU_API_KEY", "")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY", "")
+
+# 本地 LLM 配置 (Node 79)
+LOCAL_LLM_ENABLED = os.getenv("LOCAL_LLM_ENABLED", "true").lower() == "true"
+LOCAL_LLM_URL = os.getenv("LOCAL_LLM_URL", "http://localhost:8079")
+LOCAL_LLM_PRIORITY = int(os.getenv("LOCAL_LLM_PRIORITY", "1"))  # 1=最高优先级
+
+# 其他工具 API
 OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "")
 BRAVE_API_KEY = os.getenv("BRAVE_API_KEY", "")
 
@@ -122,6 +130,38 @@ def call_groq(messages: List[Dict], model: str = "llama-3.3-70b-versatile", max_
     except Exception as e:
         return {"error": str(e), "provider": "groq"}
 
+def call_local_llm(messages: List[Dict], model: str = "qwen2.5:7b-instruct-q4_K_M", max_tokens: int = 1000, temperature: float = 0.7) -> Dict:
+    """本地 LLM API (通过 Node 79)"""
+    if not LOCAL_LLM_ENABLED:
+        return {"error": "Local LLM not enabled"}
+    
+    try:
+        # 调用 Node 79 的 OpenAI 兼容 API
+        response = requests.post(
+            f"{LOCAL_LLM_URL}/v1/chat/completions",
+            headers={"Content-Type": "application/json"},
+            json={
+                "model": model,
+                "messages": messages,
+                "max_tokens": max_tokens,
+                "temperature": temperature
+            },
+            timeout=120  # 本地推理可能较慢
+        )
+        response.raise_for_status()
+        data = response.json()
+        
+        return {
+            "success": True,
+            "provider": "local",
+            "model": data.get("model", model),
+            "content": data["choices"][0]["message"]["content"],
+            "usage": data.get("usage", {}),
+            "cost": 0  # 本地推理无成本
+        }
+    except Exception as e:
+        return {"error": str(e), "provider": "local"}
+
 def call_claude(messages: List[Dict], model: str = "claude-3-5-sonnet-20241022", max_tokens: int = 1000) -> Dict:
     """Anthropic Claude API"""
     if not CLAUDE_API_KEY:
@@ -219,6 +259,17 @@ def web_search(query: str, count: int = 10) -> Dict:
 async def health():
     """健康检查 - 显示哪些 API 可用"""
     providers = []
+    
+    # 检查本地 LLM
+    if LOCAL_LLM_ENABLED:
+        try:
+            resp = requests.get(f"{LOCAL_LLM_URL}/health", timeout=2)
+            if resp.status_code == 200:
+                providers.append("local")
+        except:
+            pass
+    
+    # 检查云端提供商
     if OPENROUTER_API_KEY: providers.append("openrouter")
     if ZHIPU_API_KEY: providers.append("zhipu")
     if GROQ_API_KEY: providers.append("groq")
@@ -234,6 +285,8 @@ async def health():
         "name": "OneAPI Gateway",
         "available_providers": providers,
         "available_tools": tools,
+        "local_llm_enabled": LOCAL_LLM_ENABLED,
+        "local_llm_priority": LOCAL_LLM_PRIORITY if LOCAL_LLM_ENABLED else None,
         "timestamp": datetime.now().isoformat()
     }
 
@@ -241,27 +294,46 @@ async def health():
 async def list_models():
     """列出可用模型"""
     models = []
+    
+    # 本地 LLM 模型
+    if LOCAL_LLM_ENABLED:
+        try:
+            resp = requests.get(f"{LOCAL_LLM_URL}/v1/models", timeout=2)
+            if resp.status_code == 200:
+                local_models = resp.json().get("data", [])
+                for model in local_models:
+                    models.append({
+                        "id": f"local/{model['id']}",
+                        "provider": "local",
+                        "cost": 0,
+                        "priority": LOCAL_LLM_PRIORITY
+                    })
+        except:
+            pass
+    
+    # 云端模型
     if OPENROUTER_API_KEY:
         models.extend([
-            {"id": "openrouter/gpt-4", "provider": "openrouter"},
-            {"id": "openrouter/gpt-3.5-turbo", "provider": "openrouter"},
-            {"id": "openrouter/claude-3-opus", "provider": "openrouter"}
+            {"id": "openrouter/gpt-4", "provider": "openrouter", "cost": "medium"},
+            {"id": "openrouter/gpt-3.5-turbo", "provider": "openrouter", "cost": "low"},
+            {"id": "openrouter/claude-3-opus", "provider": "openrouter", "cost": "high"}
         ])
     if ZHIPU_API_KEY:
         models.extend([
-            {"id": "zhipu/glm-4-flash", "provider": "zhipu"},
-            {"id": "zhipu/glm-4", "provider": "zhipu"}
+            {"id": "zhipu/glm-4-flash", "provider": "zhipu", "cost": "low"},
+            {"id": "zhipu/glm-4", "provider": "zhipu", "cost": "medium"}
         ])
     if GROQ_API_KEY:
         models.extend([
-            {"id": "groq/llama-3.3-70b-versatile", "provider": "groq"},
-            {"id": "groq/mixtral-8x7b-32768", "provider": "groq"}
+            {"id": "groq/llama-3.3-70b-versatile", "provider": "groq", "cost": "free"},
+            {"id": "groq/mixtral-8x7b-32768", "provider": "groq", "cost": "free"}
         ])
     if CLAUDE_API_KEY:
         models.extend([
-            {"id": "claude/claude-3-5-sonnet-20241022", "provider": "claude"},
-            {"id": "claude/claude-3-haiku-20240307", "provider": "claude"}
+            {"id": "claude/claude-3-5-sonnet-20241022", "provider": "claude", "cost": "high"},
+            {"id": "claude/claude-3-haiku-20240307", "provider": "claude", "cost": "low"}
         ])
+    
     return {"object": "list", "data": models}
 
 @app.post("/v1/chat/completions")
@@ -273,8 +345,30 @@ async def chat_completions(request: ChatRequest, authorization: str = Header(Non
     
     # 自动选择提供商
     if model == "auto" or "/" not in model:
-        # 优先级: groq (快) > zhipu (中文好) > openrouter (全) > claude (强)
-        if GROQ_API_KEY:
+        # 智能路由策略
+        # 优先级: local (免费+快) > groq (快) > zhipu (中文) > openrouter > claude
+        
+        # 1. 尝试本地 LLM
+        if LOCAL_LLM_ENABLED and LOCAL_LLM_PRIORITY == 1:
+            result = call_local_llm(messages, max_tokens=max_tokens, temperature=request.temperature)
+            if "error" not in result:
+                # 本地成功，直接返回
+                pass
+            else:
+                # 本地失败，Fallback 到云端
+                if GROQ_API_KEY:
+                    result = call_groq(messages, max_tokens=max_tokens)
+                elif ZHIPU_API_KEY:
+                    result = call_zhipu(messages, max_tokens=max_tokens)
+                elif OPENROUTER_API_KEY:
+                    result = call_openrouter(messages, max_tokens=max_tokens)
+                elif CLAUDE_API_KEY:
+                    result = call_claude(messages, max_tokens=max_tokens)
+                else:
+                    raise HTTPException(status_code=503, detail=f"Local LLM failed and no cloud provider available: {result['error']}")
+        
+        # 2. 云端优先，本地备用
+        elif GROQ_API_KEY:
             result = call_groq(messages, max_tokens=max_tokens)
         elif ZHIPU_API_KEY:
             result = call_zhipu(messages, max_tokens=max_tokens)
@@ -282,12 +376,23 @@ async def chat_completions(request: ChatRequest, authorization: str = Header(Non
             result = call_openrouter(messages, max_tokens=max_tokens)
         elif CLAUDE_API_KEY:
             result = call_claude(messages, max_tokens=max_tokens)
+        elif LOCAL_LLM_ENABLED:
+            # 所有云端都不可用，使用本地
+            result = call_local_llm(messages, max_tokens=max_tokens, temperature=request.temperature)
         else:
             raise HTTPException(status_code=503, detail="No LLM provider configured")
     else:
         # 指定提供商
-        provider, model_name = model.split("/", 1)
-        if provider == "openrouter":
+        if "/" in model:
+            provider, model_name = model.split("/", 1)
+        else:
+            # 没有 /，直接使用本地 LLM
+            provider = "local"
+            model_name = model
+        
+        if provider == "local":
+            result = call_local_llm(messages, model_name, max_tokens, request.temperature)
+        elif provider == "openrouter":
             result = call_openrouter(messages, model_name, max_tokens)
         elif provider == "zhipu":
             result = call_zhipu(messages, model_name, max_tokens)
