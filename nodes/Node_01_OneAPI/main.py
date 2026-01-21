@@ -23,6 +23,7 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 ZHIPU_API_KEY = os.getenv("ZHIPU_API_KEY", "")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY", "")
+TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY", "")
 
 # 本地 LLM 配置 (Node 79)
 LOCAL_LLM_ENABLED = os.getenv("LOCAL_LLM_ENABLED", "true").lower() == "true"
@@ -162,6 +163,33 @@ def call_local_llm(messages: List[Dict], model: str = "qwen2.5:7b-instruct-q4_K_
     except Exception as e:
         return {"error": str(e), "provider": "local"}
 
+def call_together(messages: List[Dict], model: str = "meta-llama/Llama-3.3-70B-Instruct-Turbo", max_tokens: int = 1000) -> Dict:
+    """Together AI API - 支持多种开源模型"""
+    if not TOGETHER_API_KEY:
+        return {"error": "TOGETHER_API_KEY not configured"}
+    
+    try:
+        response = requests.post(
+            "https://api.together.xyz/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {TOGETHER_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={"model": model, "messages": messages, "max_tokens": max_tokens},
+            timeout=60
+        )
+        response.raise_for_status()
+        data = response.json()
+        return {
+            "success": True,
+            "provider": "together",
+            "model": model,
+            "content": data["choices"][0]["message"]["content"],
+            "usage": data.get("usage", {})
+        }
+    except Exception as e:
+        return {"error": str(e), "provider": "together"}
+
 def call_claude(messages: List[Dict], model: str = "claude-3-5-sonnet-20241022", max_tokens: int = 1000) -> Dict:
     """Anthropic Claude API"""
     if not CLAUDE_API_KEY:
@@ -273,6 +301,7 @@ async def health():
     if OPENROUTER_API_KEY: providers.append("openrouter")
     if ZHIPU_API_KEY: providers.append("zhipu")
     if GROQ_API_KEY: providers.append("groq")
+    if TOGETHER_API_KEY: providers.append("together")
     if CLAUDE_API_KEY: providers.append("claude")
     
     tools = []
@@ -328,6 +357,13 @@ async def list_models():
             {"id": "groq/llama-3.3-70b-versatile", "provider": "groq", "cost": "free"},
             {"id": "groq/mixtral-8x7b-32768", "provider": "groq", "cost": "free"}
         ])
+    if TOGETHER_API_KEY:
+        models.extend([
+            {"id": "together/meta-llama/Llama-3.3-70B-Instruct-Turbo", "provider": "together", "cost": "low"},
+            {"id": "together/meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo", "provider": "together", "cost": "medium"},
+            {"id": "together/Qwen/Qwen2.5-72B-Instruct-Turbo", "provider": "together", "cost": "low"},
+            {"id": "together/deepseek-ai/DeepSeek-V3", "provider": "together", "cost": "low"}
+        ])
     if CLAUDE_API_KEY:
         models.extend([
             {"id": "claude/claude-3-5-sonnet-20241022", "provider": "claude", "cost": "high"},
@@ -370,6 +406,8 @@ async def chat_completions(request: ChatRequest, authorization: str = Header(Non
         # 2. 云端优先，本地备用
         elif GROQ_API_KEY:
             result = call_groq(messages, max_tokens=max_tokens)
+        elif TOGETHER_API_KEY:
+            result = call_together(messages, max_tokens=max_tokens)
         elif ZHIPU_API_KEY:
             result = call_zhipu(messages, max_tokens=max_tokens)
         elif OPENROUTER_API_KEY:
@@ -398,6 +436,8 @@ async def chat_completions(request: ChatRequest, authorization: str = Header(Non
             result = call_zhipu(messages, model_name, max_tokens)
         elif provider == "groq":
             result = call_groq(messages, model_name, max_tokens)
+        elif provider == "together":
+            result = call_together(messages, model_name, max_tokens)
         elif provider == "claude":
             result = call_claude(messages, model_name, max_tokens)
         else:
