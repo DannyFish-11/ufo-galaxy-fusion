@@ -43,15 +43,14 @@
   - [x] Function Calling
   - [x] Fallback 机制
   - [x] 完整文档 (471 行)
-- [ ] 推送到 GitHub
-
-**Day 2-3:**
-- [ ] 实现 Node 80: Memory System
-  - [ ] Redis 短期记忆
-  - [ ] Memos 长期记忆
-  - [ ] ChromaDB 语义记忆
-  - [ ] SQLite 用户画像
-- [ ] 部署 Podman 容器
+- [ ] 推送到 GitH**Day 2-3:**
+- [x] 实现 Node 80: Memory System
+  - [x] Redis 短期记忆 (789 行)
+  - [x] Memos 长期记忆
+  - [x] 简化版语义记忆
+  - [x] SQLite 用户画像
+  - [x] 完整文档 (343 行)
+- [ ] 推送到 GitHubman 容器
 - [ ] 推送到 GitHub
 
 **Day 4-5:**
@@ -135,8 +134,8 @@
 - [ ] Node 23+23 → Node 23 (Time & Calendar)
 
 ### 新增节点 (10个)
-- [x] Node 79: Local LLM (631 行，完成)
-- [ ] Node 80: Memory System
+- [x] Node 79: Local LLM (696 行，完成)
+- [x] Node 80: Memory System (789 行，完成)
 - [ ] Node 81: Orchestrator
 - [ ] Node 82: Network Guard
 - [ ] Node 83: News Aggregator
@@ -238,6 +237,6 @@
 
 ---
 
-**最后更新:** 2026-01-21 23:00  
+**最后更新:** 2026-01-22 00:00  
 **更新人:** Manus AI Agent  
-**下次检查点:** Node 79 推送后，开始 Node 80
+**下次检查点:** Node 80 推送后，开始节点精简
