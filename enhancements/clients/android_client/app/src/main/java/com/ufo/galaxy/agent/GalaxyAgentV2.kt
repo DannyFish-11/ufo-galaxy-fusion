@@ -8,6 +8,8 @@ import com.ufo.galaxy.executor.TaskExecutor
 import com.ufo.galaxy.network.TailscaleAdapter
 import com.ufo.galaxy.protocol.AIPProtocol
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONObject
 
 /**
@@ -40,6 +42,10 @@ class GalaxyAgentV2(private val context: Context) {
     @Volatile
     private var isRunning = false
     
+    // 状态流
+    private val _status = MutableStateFlow("未启动")
+    val status: StateFlow<String> = _status
+    
     /**
      * 启动 Agent
      */
@@ -51,24 +57,30 @@ class GalaxyAgentV2(private val context: Context) {
         
         Log.i(TAG, "🚀 启动 UFO³ Galaxy Android Agent V2")
         isRunning = true
+        _status.value = "正在启动..."
         
         scope.launch {
             try {
                 // 1. 自适应配置
                 Log.i(TAG, "🔧 开始自适应配置...")
+                _status.value = "正在配置网络..."
                 val configured = tailscaleAdapter.autoConfig()
                 
                 if (!configured) {
                     Log.w(TAG, "⚠️ 自适应配置失败，请手动配置")
+                    _status.value = "配置失败"
                     return@launch
                 }
+                _status.value = "网络配置完成"
                 
                 // 2. 获取 Node 50 URL
                 val node50Url = tailscaleAdapter.getNode50Url()
                 if (node50Url == null) {
                     Log.e(TAG, "❌ 无法获取 Node 50 地址")
+                    _status.value = "错误: 未找到 Node 50"
                     return@launch
                 }
+                _status.value = "找到 Node 50: $node50Url"
                 
                 Log.i(TAG, "✅ Node 50 地址: $node50Url")
                 
@@ -80,12 +92,15 @@ class GalaxyAgentV2(private val context: Context) {
                 )
                 
                 // 4. 连接到 Node 50
+                _status.value = "正在连接..."
                 node50Client?.connect()
                 
+                _status.value = "✅ 已连接到 Galaxy 系统"
                 Log.i(TAG, "✅ UFO³ Galaxy Android Agent V2 启动完成")
                 
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Agent 启动失败", e)
+                _status.value = "错误: ${e.message}"
                 isRunning = false
             }
         }
@@ -101,6 +116,7 @@ class GalaxyAgentV2(private val context: Context) {
         node50Client?.disconnect()
         node50Client?.cleanup()
         node50Client = null
+        _status.value = "已停止"
         
         Log.i(TAG, "✅ Agent 已停止")
     }
