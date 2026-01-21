@@ -434,3 +434,76 @@ print(response.json())
 **项目仓库:** https://github.com/DannyFish-11/ufo-galaxy  
 **最后更新:** 2026-01-22  
 **Node 01 版本:** 2.1.0
+
+---
+
+### 7. Perplexity (实时搜索增强) ⭐ 新增
+
+**提供商:** Perplexity AI  
+**成本:** 中等 ($1-5/1M tokens)  
+**优势:** 实时联网搜索、引用来源、最新信息
+
+| 模型 ID | 上下文 | 特点 | 推荐度 |
+|---------|--------|------|--------|
+| `perplexity/sonar-pro` | 200K | 最强，联网搜索 | ⭐⭐⭐⭐⭐ |
+| `perplexity/sonar` | 128K | 标准版 | ⭐⭐⭐⭐☆ |
+| `perplexity/sonar-reasoning` | 128K | 推理增强 | ⭐⭐⭐⭐⭐ |
+
+**使用示例:**
+```python
+# 实时信息查询
+response = requests.post("http://localhost:8001/v1/chat/completions", json={
+    "model": "perplexity/sonar-pro",
+    "messages": [{"role": "user", "content": "What are the latest AI breakthroughs in 2026?"}]
+})
+
+# 返回结果包含引用来源
+print(response.json()["citations"])
+```
+
+**配置:**
+```bash
+export PERPLEXITY_API_KEY="your_perplexity_api_key"
+```
+
+**适合场景:**
+- ✅ 实时新闻查询
+- ✅ 最新信息获取
+- ✅ 事实核查
+- ✅ 研究报告（带来源）
+
+---
+
+### 8. Pixverse (视频生成) ⭐ 新增
+
+**提供商:** Pixverse AI  
+**成本:** 按次计费  
+**功能:** 文本生成视频、图片生成视频
+
+**使用示例:**
+```python
+# 文本生成视频
+response = requests.post("http://localhost:8001/generate_video", json={
+    "prompt": "A cat walking in the rain",
+})
+
+# 图片生成视频
+response = requests.post("http://localhost:8001/generate_video", json={
+    "prompt": "Make this image move",
+    "image_url": "https://example.com/image.jpg"
+})
+
+print(response.json()["video_url"])
+```
+
+**配置:**
+```bash
+export PIXVERSE_API_KEY="your_pixverse_api_key"
+```
+
+**适合场景:**
+- ✅ 视频内容创作
+- ✅ 动画生成
+- ✅ 营销素材
+- ✅ 社交媒体内容
+

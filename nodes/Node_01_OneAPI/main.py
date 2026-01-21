@@ -24,6 +24,8 @@ ZHIPU_API_KEY = os.getenv("ZHIPU_API_KEY", "")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY", "")
 TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY", "")
+PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY", "")
+PIXVERSE_API_KEY = os.getenv("PIXVERSE_API_KEY", "")
 
 # 本地 LLM 配置 (Node 79)
 LOCAL_LLM_ENABLED = os.getenv("LOCAL_LLM_ENABLED", "true").lower() == "true"
@@ -190,6 +192,65 @@ def call_together(messages: List[Dict], model: str = "meta-llama/Llama-3.3-70B-I
     except Exception as e:
         return {"error": str(e), "provider": "together"}
 
+def call_perplexity(messages: List[Dict], model: str = "sonar-pro", max_tokens: int = 1000) -> Dict:
+    """Perplexity API - 实时搜索增强的 LLM"""
+    if not PERPLEXITY_API_KEY:
+        return {"error": "PERPLEXITY_API_KEY not configured"}
+    
+    try:
+        response = requests.post(
+            "https://api.perplexity.ai/chat/completions",
+            headers={
+                "Authorization": f"Bearer {PERPLEXITY_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={"model": model, "messages": messages, "max_tokens": max_tokens},
+            timeout=60
+        )
+        response.raise_for_status()
+        data = response.json()
+        return {
+            "success": True,
+            "provider": "perplexity",
+            "model": model,
+            "content": data["choices"][0]["message"]["content"],
+            "usage": data.get("usage", {}),
+            "citations": data.get("citations", [])  # Perplexity 提供来源引用
+        }
+    except Exception as e:
+        return {"error": str(e), "provider": "perplexity"}
+
+def call_pixverse(prompt: str, image_url: Optional[str] = None) -> Dict:
+    """Pixverse API - 视频生成"""
+    if not PIXVERSE_API_KEY:
+        return {"error": "PIXVERSE_API_KEY not configured"}
+    
+    try:
+        payload = {"prompt": prompt}
+        if image_url:
+            payload["image_url"] = image_url
+        
+        response = requests.post(
+            "https://api.pixverse.ai/v1/generate",
+            headers={
+                "Authorization": f"Bearer {PIXVERSE_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json=payload,
+            timeout=120  # 视频生成需要更长时间
+        )
+        response.raise_for_status()
+        data = response.json()
+        return {
+            "success": True,
+            "provider": "pixverse",
+            "video_url": data.get("video_url"),
+            "task_id": data.get("task_id"),
+            "status": data.get("status")
+        }
+    except Exception as e:
+        return {"error": str(e), "provider": "pixverse"}
+
 def call_claude(messages: List[Dict], model: str = "claude-3-5-sonnet-20241022", max_tokens: int = 1000) -> Dict:
     """Anthropic Claude API"""
     if not CLAUDE_API_KEY:
@@ -302,11 +363,13 @@ async def health():
     if ZHIPU_API_KEY: providers.append("zhipu")
     if GROQ_API_KEY: providers.append("groq")
     if TOGETHER_API_KEY: providers.append("together")
+    if PERPLEXITY_API_KEY: providers.append("perplexity")
     if CLAUDE_API_KEY: providers.append("claude")
     
     tools = []
     if OPENWEATHER_API_KEY: tools.append("weather")
     if BRAVE_API_KEY: tools.append("search")
+    if PIXVERSE_API_KEY: tools.append("video_generation")
     
     return {
         "status": "healthy" if providers else "degraded",
@@ -438,6 +501,8 @@ async def chat_completions(request: ChatRequest, authorization: str = Header(Non
             result = call_groq(messages, model_name, max_tokens)
         elif provider == "together":
             result = call_together(messages, model_name, max_tokens)
+        elif provider == "perplexity":
+            result = call_perplexity(messages, model_name, max_tokens)
         elif provider == "claude":
             result = call_claude(messages, model_name, max_tokens)
         else:
@@ -518,3 +583,11 @@ async def mcp_call(request: Dict[str, Any]):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
+
+@app.post("/generate_video")
+async def generate_video(prompt: str, image_url: Optional[str] = None):
+    """视频生成接口 - 使用 Pixverse"""
+    result = call_pixverse(prompt, image_url)
+    if "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
+    return result
