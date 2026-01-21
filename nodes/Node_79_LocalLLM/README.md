@@ -16,10 +16,16 @@
    - 自动重试
    - 降级策略
 
-3. **多模型支持**
-   - Qwen2.5-7B-Instruct (主推荐)
-   - Llama 3.1-8B (备用)
-   - Gemma 2-9B (备用)
+### 3. 多模型支持
+   - DeepSeek-Coder-6.7B (代码任务首选)
+   - Qwen2.5-14B-Instruct (复杂任务)
+   - Qwen2.5-7B-Instruct (常规任务)
+   - Qwen2.5-3B-Instruct (简单任务)
+
+### 4. 智能模型选择
+   - 根据任务类型自动选择最优模型
+   - 支持手动指定 task_type
+   - 基于关键词智能识别
 
 ### 优势
 - ✅ 离线可用
@@ -52,14 +58,17 @@ brew install ollama
 ### 2. 下载模型
 
 ```bash
-# 推荐：Qwen2.5-7B (量化版，4-5GB 内存)
+# 代码任务首选：DeepSeek-Coder
+ollama pull deepseek-coder:6.7b-instruct-q4_K_M
+
+# 复杂任务：Qwen2.5-14B (如果内存 >= 16GB)
+ollama pull qwen2.5:14b-instruct-q4_K_M
+
+# 常规任务：Qwen2.5-7B
 ollama pull qwen2.5:7b-instruct-q4_K_M
 
-# 备用：Llama 3.1-8B
-ollama pull llama3.1:8b
-
-# 备用：Gemma 2-9B
-ollama pull gemma2:9b
+# 简单任务：Qwen2.5-3B (快速响应)
+ollama pull qwen2.5:3b-instruct-q4_K_M
 ```
 
 ### 3. 启动 Ollama 服务
@@ -77,6 +86,12 @@ ollama serve
 # Ollama 配置
 OLLAMA_URL=http://localhost:11434
 DEFAULT_MODEL=qwen2.5:7b-instruct-q4_K_M
+
+# 多模型配置
+CODE_MODEL=deepseek-coder:6.7b-instruct-q4_K_M
+COMPLEX_MODEL=qwen2.5:14b-instruct-q4_K_M
+NORMAL_MODEL=qwen2.5:7b-instruct-q4_K_M
+SIMPLE_MODEL=qwen2.5:3b-instruct-q4_K_M
 
 # Fallback 配置
 FALLBACK_ENABLED=true
@@ -137,6 +152,7 @@ curl http://localhost:8079/models
 
 ### 3. 生成响应（同步）
 
+**手动指定模型：**
 ```bash
 curl -X POST http://localhost:8079/generate \
   -H "Content-Type: application/json" \
@@ -145,6 +161,33 @@ curl -X POST http://localhost:8079/generate \
     "model": "qwen2.5:7b-instruct-q4_K_M",
     "temperature": 0.7,
     "max_tokens": 500
+  }'
+```
+
+**自动选择模型（推荐）：**
+```bash
+# 代码任务 - 自动使用 DeepSeek-Coder
+curl -X POST http://localhost:8079/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Write a Python function to calculate fibonacci numbers",
+    "task_type": "code"
+  }'
+
+# 复杂任务 - 自动使用 Qwen2.5-14B
+curl -X POST http://localhost:8079/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Analyze the architecture of UFO³ Galaxy and suggest optimizations",
+    "task_type": "complex"
+  }'
+
+# 简单任务 - 自动使用 Qwen2.5-3B
+curl -X POST http://localhost:8079/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "你好，介绍一下你自己",
+    "task_type": "simple"
   }'
 ```
 
@@ -244,6 +287,8 @@ curl -X POST http://localhost:8079/generate \
 
 ## Python SDK 示例
 
+### 基本使用
+
 ```python
 import httpx
 import asyncio
@@ -251,7 +296,7 @@ import asyncio
 async def main():
     client = httpx.AsyncClient()
     
-    # 生成响应
+    # 自动选择模型
     response = await client.post(
         "http://localhost:8079/generate",
         json={
@@ -265,6 +310,53 @@ async def main():
     print(data["response"])
     
     await client.aclose()
+
+asyncio.run(main())
+```
+
+### 智能模型选择
+
+```python
+import httpx
+import asyncio
+
+async def generate_with_task_type(prompt: str, task_type: str):
+    """根据任务类型生成响应"""
+    client = httpx.AsyncClient()
+    
+    response = await client.post(
+        "http://localhost:8079/generate",
+        json={
+            "prompt": prompt,
+            "task_type": task_type,  # code, complex, normal, simple
+            "temperature": 0.7
+        }
+    )
+    
+    data = response.json()
+    print(f"Model used: {data['model']}")
+    print(f"Response: {data['response']}")
+    
+    await client.aclose()
+
+async def main():
+    # 代码任务 - 使用 DeepSeek-Coder
+    await generate_with_task_type(
+        "Write a function to sort a list",
+        "code"
+    )
+    
+    # 复杂任务 - 使用 Qwen2.5-14B
+    await generate_with_task_type(
+        "Design a distributed system architecture",
+        "complex"
+    )
+    
+    # 简单任务 - 使用 Qwen2.5-3B
+    await generate_with_task_type(
+        "你好",
+        "simple"
+    )
 
 asyncio.run(main())
 ```

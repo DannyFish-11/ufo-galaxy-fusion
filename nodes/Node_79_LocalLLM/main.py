@@ -16,9 +16,10 @@ Node 79: Local LLM
 - 数据隐私保护
 
 支持的模型：
-- Qwen2.5-7B-Instruct (主推荐)
-- Llama 3.1-8B (备用)
-- Gemma 2-9B (备用)
+- DeepSeek-Coder-6.7B (代码任务首选)
+- Qwen2.5-14B-Instruct (复杂任务)
+- Qwen2.5-7B-Instruct (常规任务)
+- Qwen2.5-3B-Instruct (简单任务，快速响应)
 """
 
 import os
@@ -52,8 +53,23 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 FALLBACK_ENABLED = os.getenv("FALLBACK_ENABLED", "true").lower() == "true"
 FALLBACK_URL = os.getenv("FALLBACK_URL", "http://localhost:8001")  # Node 01 (OneAPI)
 
-# 默认模型
+# 模型配置
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "qwen2.5:7b-instruct-q4_K_M")
+
+# 多模型支持
+MODEL_MAPPING = {
+    "code": os.getenv("CODE_MODEL", "deepseek-coder:6.7b-instruct-q4_K_M"),
+    "complex": os.getenv("COMPLEX_MODEL", "qwen2.5:14b-instruct-q4_K_M"),
+    "normal": os.getenv("NORMAL_MODEL", "qwen2.5:7b-instruct-q4_K_M"),
+    "simple": os.getenv("SIMPLE_MODEL", "qwen2.5:3b-instruct-q4_K_M"),
+}
+
+# 任务类型关键词
+TASK_KEYWORDS = {
+    "code": ["code", "programming", "debug", "refactor", "function", "class", "代码", "编程", "函数"],
+    "complex": ["analyze", "reasoning", "plan", "design", "architecture", "分析", "推理", "规划", "设计"],
+    "simple": ["hello", "hi", "what", "who", "when", "where", "你好", "什么", "谁", "哪里"],
+}
 
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL),
@@ -73,7 +89,8 @@ class ModelInfo(BaseModel):
 
 class GenerateRequest(BaseModel):
     prompt: str
-    model: Optional[str] = DEFAULT_MODEL
+    model: Optional[str] = None  # None = 自动选择
+    task_type: Optional[str] = None  # code, complex, normal, simple
     system: Optional[str] = None
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     max_tokens: int = Field(default=2048, ge=1, le=8192)
@@ -86,7 +103,8 @@ class ChatMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     messages: List[ChatMessage]
-    model: Optional[str] = DEFAULT_MODEL
+    model: Optional[str] = None  # None = 自动选择
+    task_type: Optional[str] = None  # code, complex, normal, simple
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     max_tokens: int = Field(default=2048, ge=1, le=8192)
     stream: bool = False
@@ -368,6 +386,41 @@ class OllamaClient:
         await self.http_client.aclose()
 
 # =============================================================================
+# Model Selection
+# =============================================================================
+
+def select_model_by_task(prompt: str, task_type: Optional[str] = None) -> str:
+    """根据任务类型自动选择模型"""
+    # 如果明确指定了 task_type
+    if task_type and task_type in MODEL_MAPPING:
+        return MODEL_MAPPING[task_type]
+    
+    # 根据 prompt 内容推断任务类型
+    prompt_lower = prompt.lower()
+    
+    # 检查代码任务
+    for keyword in TASK_KEYWORDS["code"]:
+        if keyword in prompt_lower:
+            logger.info(f"Detected code task, using {MODEL_MAPPING['code']}")
+            return MODEL_MAPPING["code"]
+    
+    # 检查复杂任务
+    for keyword in TASK_KEYWORDS["complex"]:
+        if keyword in prompt_lower:
+            logger.info(f"Detected complex task, using {MODEL_MAPPING['complex']}")
+            return MODEL_MAPPING["complex"]
+    
+    # 检查简单任务
+    for keyword in TASK_KEYWORDS["simple"]:
+        if keyword in prompt_lower:
+            logger.info(f"Detected simple task, using {MODEL_MAPPING['simple']}")
+            return MODEL_MAPPING["simple"]
+    
+    # 默认使用常规模型
+    logger.info(f"Using default model: {MODEL_MAPPING['normal']}")
+    return MODEL_MAPPING["normal"]
+
+# =============================================================================
 # Local LLM Service
 # =============================================================================
 
@@ -385,10 +438,13 @@ class LocalLLMService:
     async def generate(self, request: GenerateRequest) -> GenerateResponse:
         """生成响应（带 Fallback）"""
         try:
+            # 自动选择模型
+            model = request.model or select_model_by_task(request.prompt, request.task_type)
+            
             # 尝试本地生成
             return await self.ollama.generate(
                 prompt=request.prompt,
-                model=request.model,
+                model=model,
                 system=request.system,
                 temperature=request.temperature,
                 max_tokens=request.max_tokens,
@@ -407,9 +463,12 @@ class LocalLLMService:
     async def generate_stream(self, request: GenerateRequest) -> AsyncIterator[str]:
         """生成响应（流式，带 Fallback）"""
         try:
+            # 自动选择模型
+            model = request.model or select_model_by_task(request.prompt, request.task_type)
+            
             async for chunk in self.ollama.generate_stream(
                 prompt=request.prompt,
-                model=request.model,
+                model=model,
                 system=request.system,
                 temperature=request.temperature,
                 max_tokens=request.max_tokens
@@ -429,9 +488,13 @@ class LocalLLMService:
     async def chat(self, request: ChatRequest) -> GenerateResponse:
         """聊天（带 Fallback）"""
         try:
+            # 自动选择模型（基于最后一条用户消息）
+            last_user_message = next((msg.content for msg in reversed(request.messages) if msg.role == "user"), "")
+            model = request.model or select_model_by_task(last_user_message, request.task_type)
+            
             return await self.ollama.chat(
                 messages=request.messages,
-                model=request.model,
+                model=model,
                 temperature=request.temperature,
                 max_tokens=request.max_tokens,
                 tools=request.tools
@@ -559,7 +622,9 @@ async def root():
         "status": "running",
         "ollama_url": OLLAMA_URL,
         "fallback_enabled": FALLBACK_ENABLED,
-        "default_model": DEFAULT_MODEL
+        "default_model": DEFAULT_MODEL,
+        "model_mapping": MODEL_MAPPING,
+        "supported_task_types": list(MODEL_MAPPING.keys())
     }
 
 @app.get("/health")
