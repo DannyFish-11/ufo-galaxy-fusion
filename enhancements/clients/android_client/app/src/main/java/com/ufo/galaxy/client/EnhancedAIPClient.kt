@@ -28,8 +28,10 @@ import java.util.concurrent.TimeUnit
 class EnhancedAIPClient(
     private val deviceId: String,
     private val galaxyUrl: String,  // 微软 Galaxy 的 WebSocket 地址
+    private val context: android.content.Context,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) {
+    private val commandExecutor = AndroidCommandExecutor(context)
     private val TAG = "EnhancedAIPClient"
     private val client = OkHttpClient.Builder()
         .readTimeout(0, TimeUnit.MILLISECONDS)
@@ -238,15 +240,7 @@ class EnhancedAIPClient(
      * 执行 Android 命令
      */
     private fun executeAndroidCommand(command: String, params: JSONObject): JSONObject {
-        // 这里应该实现具体的 Android 操作
-        // 例如：获取位置、拍照、发送通知等
-        
-        return JSONObject().apply {
-            put("command", command)
-            put("status", "success")
-            put("details", "Command $command executed on Android device $deviceId")
-            put("timestamp", System.currentTimeMillis() / 1000)
-        }
+        return commandExecutor.executeCommand(command, params)
     }
 
     /**
