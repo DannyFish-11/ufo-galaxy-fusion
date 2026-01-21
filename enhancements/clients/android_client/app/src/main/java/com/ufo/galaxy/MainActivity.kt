@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.ufo.galaxy.agent.GalaxyAgentV2
+import com.ufo.galaxy.input.NaturalLanguageInputManager
 import com.ufo.galaxy.service.FloatingWindowService
 import com.ufo.galaxy.ui.theme.GeekThemePremium
 import kotlinx.coroutines.launch
@@ -44,6 +45,9 @@ class MainActivity : ComponentActivity() {
     
     // Galaxy Agent 实例
     private lateinit var galaxyAgent: GalaxyAgentV2
+    
+    // 自然语言输入管理器
+    private lateinit var inputManager: NaturalLanguageInputManager
     
     // 权限请求
     private val permissionLauncher = registerForActivityResult(
@@ -77,6 +81,15 @@ class MainActivity : ComponentActivity() {
             GeekThemePremium {
                 MainScreen()
             }
+        }
+        
+        // 初始化自然语言输入管理器
+        inputManager = NaturalLanguageInputManager(this)
+        inputManager.initialize()
+        
+        // 设置输入回调
+        inputManager.onInputReceived = { input ->
+            handleNaturalLanguageInput(input, isVoice = false)
         }
         
         // 请求必要权限
