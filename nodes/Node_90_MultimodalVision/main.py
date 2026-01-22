@@ -54,6 +54,23 @@ try:
 except ImportError:
     pass
 
+# Qwen3-VL via OpenRouter
+try:
+    from openai import OpenAI
+    OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+    if OPENROUTER_API_KEY:
+        qwen_client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=OPENROUTER_API_KEY
+        )
+        QWEN_VL_AVAILABLE = True
+    else:
+        qwen_client = None
+        QWEN_VL_AVAILABLE = False
+except ImportError:
+    qwen_client = None
+    QWEN_VL_AVAILABLE = False
+
 # ============================================================================
 # 数据模型
 # ============================================================================
@@ -83,6 +100,7 @@ class AnalyzeScreenRequest(BaseModel):
     query: str
     image_path: Optional[str] = None
     image_base64: Optional[str] = None
+    provider: str = "auto"  # auto, gemini, qwen
 
 class FindTextRequest(BaseModel):
     """查找文本"""
@@ -293,9 +311,17 @@ async def find_element(request: FindElementRequest) -> Dict[str, Any]:
 
 @app.post("/analyze_screen")
 async def analyze_screen(request: AnalyzeScreenRequest) -> Dict[str, Any]:
-    """分析屏幕"""
-    if not llm_client:
-        return {"success": False, "error": "LLM not available"}
+    """分析屏幕（支持 Gemini 和 Qwen3-VL）"""
+    # 选择 provider
+    provider = request.provider
+    if provider == "auto":
+        # 优先使用 Qwen3-VL，其次 Gemini
+        if QWEN_VL_AVAILABLE:
+            provider = "qwen"
+        elif llm_client:
+            provider = "gemini"
+        else:
+            return {"success": False, "error": "No VLM provider available"}
     
     # 加载图片
     if not request.image_path and not request.image_base64:
@@ -305,23 +331,84 @@ async def analyze_screen(request: AnalyzeScreenRequest) -> Dict[str, Any]:
             return screenshot_result
         request.image_base64 = screenshot_result["image"]
     
-    image = load_image(request.image_path, request.image_base64)
-    
     try:
-        # 使用 Gemini 分析
-        response = llm_client.models.generate_content(
-            model="gemini-2.0-flash-exp",
-            contents=[request.query, image]
-        )
+        if provider == "qwen":
+            # 使用 Qwen3-VL via OpenRouter
+            if not QWEN_VL_AVAILABLE:
+                return {"success": False, "error": "Qwen3-VL not available"}
+            
+            # 上传图片并获取 URL
+            if request.image_path:
+                # 使用manus-upload-file 上传
+                import subprocess
+                result = subprocess.run(
+                    ["manus-upload-file", request.image_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=60
+                )
+                image_url = result.stdout.strip()
+            else:
+                # 将 base64 保存为临时文件再上传
+                import tempfile
+                image_data = base64.b64decode(request.image_base64)
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+                    tmp.write(image_data)
+                    tmp_path = tmp.name
+                
+                result = subprocess.run(
+                    ["manus-upload-file", tmp_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=60
+                )
+                image_url = result.stdout.strip()
+                os.unlink(tmp_path)
+            
+            # 调用 Qwen3-VL
+            response = qwen_client.chat.completions.create(
+                model="qwen/qwen3-vl-32b-instruct",
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": request.query},
+                        {"type": "image_url", "image_url": {"url": image_url}}
+                    ]
+                }],
+                temperature=0.2,
+                max_tokens=2048
+            )
+            
+            return {
+                "success": True,
+                "query": request.query,
+                "analysis": response.choices[0].message.content,
+                "provider": "qwen"
+            }
         
-        return {
-            "success": True,
-            "query": request.query,
-            "analysis": response.text
-        }
+        elif provider == "gemini":
+            # 使用 Gemini
+            if not llm_client:
+                return {"success": False, "error": "Gemini not available"}
+            
+            image = load_image(request.image_path, request.image_base64)
+            response = llm_client.models.generate_content(
+                model="gemini-2.0-flash-exp",
+                contents=[request.query, image]
+            )
+            
+            return {
+                "success": True,
+                "query": request.query,
+                "analysis": response.text,
+                "provider": "gemini"
+            }
+        
+        else:
+            return {"success": False, "error": f"Unknown provider: {provider}"}
     
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": str(e), "provider": provider}
 
 # ============================================================================
 # 查找文本
