@@ -235,7 +235,9 @@ class GalaxyGatewayV3:
             
             try:
                 # 根据任务类型执行
-                if task.intent_type == "file_transfer":
+                if task.action == "vlm_analyze":
+                    result = await self._execute_vlm_task(task)
+                elif task.intent_type == "file_transfer":
                     result = await self._execute_file_transfer(task)
                 else:
                     result = await self._execute_generic_task(task)
@@ -287,6 +289,58 @@ class GalaxyGatewayV3:
             "message": "File transferred successfully"
         }
     
+    async def _execute_vlm_task(self, task: Any) -> Dict[str, Any]:
+        """执行 VLM 任务（调用 Node_90_MultimodalVision）"""
+        import httpx
+        import os
+        
+        # Node_90 地址
+        NODE_90_URL = os.getenv("NODE_90_URL", "http://localhost:8090")
+        
+        try:
+            # 准备请求数据
+            request_data = {
+                "query": task.params.get("query", task.description),
+                "provider": "auto"  # 自动选择 Qwen3-VL 或 Gemini
+            }
+            
+            # 如果有图片路径，添加到请求中
+            if "image_path" in task.params:
+                request_data["image_path"] = task.params["image_path"]
+            elif "image_base64" in task.params:
+                request_data["image_base64"] = task.params["image_base64"]
+            
+            # 调用 Node_90 的 /analyze_screen 端点
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{NODE_90_URL}/analyze_screen",
+                    json=request_data
+                )
+                response.raise_for_status()
+                result = response.json()
+            
+            if result.get("success"):
+                return {
+                    "type": "vlm_analysis",
+                    "status": "completed",
+                    "result_text": result.get("analysis", ""),
+                    "provider": result.get("provider", "unknown"),
+                    "query": result.get("query", "")
+                }
+            else:
+                return {
+                    "type": "vlm_analysis",
+                    "status": "failed",
+                    "error_message": result.get("error", "Unknown error")
+                }
+        
+        except Exception as e:
+            return {
+                "type": "vlm_analysis",
+                "status": "failed",
+                "error_message": f"Failed to call Node_90: {str(e)}"
+            }
+
     async def _execute_generic_task(self, task: Any) -> Dict[str, Any]:
         """执行通用任务"""
         # 发送任务到目标设备
