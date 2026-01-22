@@ -8,6 +8,8 @@ sys.path.append("/home/ubuntu/ufo-galaxy-check")
 
 from fastapi import FastAPI, HTTPException, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Dict, Optional, Any
 import uvicorn
@@ -422,6 +424,35 @@ async def send_command(request: Dict[str, Any]):
     
     return result
 
+
+# ===== Dashboard 路由 =====
+
+# 挂载静态文件目录
+app.mount("/static", StaticFiles(directory="galaxy_gateway/static"), name="static")
+
+@app.get("/")
+async def dashboard():
+    """Galaxy Gateway Dashboard"""
+    return FileResponse("galaxy_gateway/static/dashboard.html")
+
+@app.websocket("/ws/dashboard")
+async def dashboard_websocket(websocket: WebSocket):
+    """Dashboard WebSocket 连接"""
+    await connection_manager.connect(websocket, "dashboard")
+    try:
+        while True:
+            data = await websocket.receive_json()
+            # 处理 Dashboard 消息
+            if data.get("type") == "refresh_devices":
+                devices = device_router.get_device_status()
+                await websocket.send_json({
+                    "type": "device_update",
+                    "devices": devices
+                })
+    except Exception as e:
+        print(f"Dashboard WebSocket 错误: {e}")
+    finally:
+        connection_manager.disconnect(websocket)
 
 # ===== 启动服务 =====
 if __name__ == "__main__":
