@@ -82,6 +82,21 @@ cd ufo-galaxy
 
 ---
 
+## 🎉 v4.1 架构重构 (2026-01-22)
+
+### 视觉能力统一到 Node_90
+
+为了符合项目的“节点化”设计原则，我们对视觉理解模块进行了全面重构：
+
+1. **统一视觉节点**：所有视觉任务现由 `Node_90_MultimodalVision` 统一处理
+2. **多 VLM 支持**：集成了 Qwen3-VL (via OpenRouter) 和 Gemini 两种 VLM Provider
+3. **Gateway 简化**：`galaxy_gateway` 不再包含具体执行逻辑，只负责路由
+4. **弃用文件**：`vlm_node.py`, `qwen_vl_api.py`, `vision_understanding.py` 已移至 `.deprecated/`
+
+详细的架构分析请查看 [CODEBASE_AUDIT_REPORT.md](CODEBASE_AUDIT_REPORT.md)。
+
+---
+
 ## 🎉 v2.0 重大更新 (2026-01-22)
 
 ### 新增核心功能

@@ -65,7 +65,6 @@ class IntentType(Enum):
     INFORMATION_QUERY = "information_query"  # 信息查询
     CROSS_DEVICE_TASK = "cross_device_task"  # 跨设备任务
     MEDIA_GENERATION = "media_generation"    # 媒体生成
-    VISUAL_ANALYSIS = "visual_analysis"      # 视觉分析（新增）
     SYSTEM_COMMAND = "system_command"        # 系统命令
     UNKNOWN = "unknown"
 
@@ -299,11 +298,11 @@ class LLMClient:
         models = {
             "ollama": "qwen2.5:7b",
             "groq": "llama-3.3-70b-versatile",
-            "deepseek": "deepseek-coder", # 文本/代码生成模型
+            "deepseek": "deepseek-chat",
             "openrouter": "deepseek/deepseek-chat"
         }
         return models.get(provider, "qwen2.5:7b")
-
+    
     async def generate(self, prompt: str, system_prompt: str = None) -> str:
         """
         生成文本
@@ -348,6 +347,8 @@ class LLMClient:
                 return ""
     
     async def _generate_openai_compatible(self, prompt: str, system_prompt: str = None) -> str:
+        """使用 OpenAI 兼容 API 生成"""
+        url = f"{self.api_base}/chat/completions"
         
         messages = []
         if system_prompt:
@@ -366,38 +367,16 @@ class LLMClient:
         
         async with aiohttp.ClientSession() as session:
             try:
-                # 修复：url 变量未定义，需要从 self.api_base 构建
-                url = f"{self.api_base}/chat/completions"
-                
                 async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
                     if response.status == 200:
                         result = await response.json()
                         return result["choices"][0]["message"]["content"]
                     else:
                         print(f"LLM API error: {response.status}")
-                        print(f"Error details: {await response.text()}")
                         return ""
             except Exception as e:
                 print(f"LLM API exception: {e}")
                 return ""
-
-class VLMClient(LLMClient):
-    """VLM 客户端 - 专用于多模态任务"""
-    
-    def __init__(self, provider: str = "openrouter", api_base: str = None, api_key: str = None):
-        super().__init__(provider, api_base, api_key)
-        self.model = self._get_default_vlm_model(provider)
-        
-    def _get_default_vlm_model(self, provider: str) -> str:
-        """获取默认 VLM 模型"""
-        vlm_models = {
-            "openrouter": "qwen/qwen3-vl-32b-instruct" # 使用 Qwen3-VL
-        }
-        return vlm_models.get(provider, "qwen/qwen3-vl-32b-instruct")
-        
-    # VLMClient 不再需要 generate 方法，因为 VLM 逻辑已封装在 qwen_vl_api.py 中
-    # 这里的 VLMClient 仅用于 NLU 引擎的初始化和模型名称的定义
-    pass
 
 # ============================================================================
 # 增强版 NLU 引擎
@@ -410,7 +389,6 @@ class EnhancedNLUEngineV2:
         self,
         device_registry: DeviceRegistry,
         llm_client: LLMClient,
-        vlm_client: Optional[VLMClient] = None, # 新增 VLM 客户端
         use_llm: bool = True,
         confidence_threshold: float = 0.7
     ):
@@ -425,7 +403,6 @@ class EnhancedNLUEngineV2:
         """
         self.device_registry = device_registry
         self.llm_client = llm_client
-        self.vlm_client = vlm_client # 保存 VLM 客户端
         self.use_llm = use_llm
         self.confidence_threshold = confidence_threshold
         self.context_manager = ContextManager()
@@ -469,55 +446,33 @@ class EnhancedNLUEngineV2:
             "search": "search"
         }
     
-    async def understand(self, user_input: str) -> NLUResult:
+    async def understand(
+        self,
+        user_input: str,
+        session_id: str = "default",
+        user_id: str = "default"
+    ) -> NLUResult:
         """
-        理解用户输入并转换为结构化任务列表
+        理解用户输入
+        
+        Args:
+            user_input: 用户输入
+            session_id: 会话 ID
+            user_id: 用户 ID
+        
+        Returns:
+            NLU 解析结果
         """
         start_time = datetime.now()
-        session_id = "default_session" # 默认会话 ID
         
-        # 获取当前上下文
-        context = self.context_manager.get_or_create_context(session_id, "default_user")
+        # 获取上下文
+        context = self.context_manager.get_or_create_context(session_id, user_id)
         
-        # 1. VLM 意图规则匹配 (VLM Intent Rule Matching)
-        # 检查是否为 VLM 任务，如果是，则直接生成 VLM 任务结构
-        vlm_keywords = ["分析屏幕", "看一眼", "这个图表", "这张图片", "总结一下"]
-        is_vlm_intent = any(keyword in user_input for keyword in vlm_keywords)
-        
-        if is_vlm_intent:
-            # 尝试提取设备
-            devices = self._extract_devices(user_input)
-            target_device = devices[0] if devices else self.device_registry.get_device("pc") # 默认电脑
-            
-            if target_device and target_device.device_type in [DeviceType.WINDOWS, DeviceType.ANDROID, DeviceType.IOS]:
-                task = Task(
-                    task_id="task_1",
-                    device_id=target_device.device_id,
-                    intent_type=IntentType.VISUAL_ANALYSIS,
-                    action="vlm_analyze",
-                    target="screenshot",
-                    parameters={"image_path": "/home/ubuntu/Downloads/temp_screenshot.png", "prompt": user_input},
-                    depends_on=[], # 修复：添加缺失的 depends_on 参数
-                    confidence=0.95,
-                    estimated_duration=5.0
-                )
-                result = NLUResult(
-                    success=True,
-                    tasks=[task],
-                    confidence=0.95,
-                    clarifications=[], # 修复：添加缺失的 clarifications 参数
-                    context_used=False, # 修复：添加缺失的 context_used 参数
-                    processing_time=(datetime.now() - start_time).total_seconds(),
-                    method="vlm_rule"
-                )
-                self.context_manager.update_context(session_id, user_input, result)
-                return result
-        
-        # 2. 规则匹配 (Rule-based Matching)
-        # 优先使用规则匹配，速度快，准确率高
+        # 先尝试规则匹配
         rule_result = self._understand_with_rules(user_input, context)
         
-        if rule_result.success and rule_result.confidence >= self.confidence_threshold:
+        # 如果规则匹配置信度高，直接返回
+        if rule_result.confidence >= 0.9:
             processing_time = (datetime.now() - start_time).total_seconds()
             rule_result.processing_time = processing_time
             rule_result.method = "rule"
@@ -527,7 +482,7 @@ class EnhancedNLUEngineV2:
             
             return rule_result
         
-        # 3. LLM 理解 (LLM-based Understanding)
+        # 如果启用 LLM 且规则匹配置信度不够高，使用 LLM
         if self.use_llm:
             llm_result = await self._understand_with_llm(user_input, context)
             processing_time = (datetime.now() - start_time).total_seconds()
@@ -684,9 +639,6 @@ class EnhancedNLUEngineV2:
         # 构建 Prompt
         system_prompt = """你是 UFO³ Galaxy 的自然语言理解引擎。你的任务是理解用户的指令，并将其转换为结构化的任务列表。
 
-**特别注意：**
-如果用户指令中包含“分析屏幕”、“看一眼”、“这个图表”、“这张图片”等明显的视觉分析意图，并且目标设备是“电脑”或“平板”等可以进行截图的设备，请将意图类型设置为 `visual_analysis`，动作设置为 `vlm_analyze`，目标设置为 `screenshot`，并在 `parameters` 中包含 `image_path`（一个占位符，例如 `/home/ubuntu/Downloads/temp_screenshot.png`）和 `prompt`（用户对图像的提问）。
-
 请严格按照以下 JSON 格式输出：
 {
   "success": true/false,
@@ -708,7 +660,7 @@ class EnhancedNLUEngineV2:
   "context_used": true/false
 }
 
-意图类型包括：app_control, app_operation, file_operation, device_control, information_query, cross_device_task, media_generation, visual_analysis, system_command
+意图类型包括：app_control, app_operation, file_operation, device_control, information_query, cross_device_task, media_generation, system_command
 
 注意：
 1. 如果用户指令不明确，设置 success=false 并在 clarifications 中提出问题
@@ -716,7 +668,7 @@ class EnhancedNLUEngineV2:
 3. 如果任务有依赖关系，使用 depends_on 字段
 4. 置信度要准确反映理解的确定程度
 """
-
+        
         user_prompt = f"""可用设备：
 {json.dumps(devices_info, ensure_ascii=False, indent=2)}
 
@@ -775,11 +727,9 @@ async def main():
     # 初始化组件
     device_registry = DeviceRegistry()
     llm_client = LLMClient(provider="ollama")  # 使用本地 Ollama
-    vlm_client = VLMClient(provider="openrouter") # 新增 VLM 客户端
     nlu_engine = EnhancedNLUEngineV2(
         device_registry=device_registry,
         llm_client=llm_client,
-        vlm_client=vlm_client, # 传入 VLM 客户端
         use_llm=True
     )
     
@@ -790,8 +740,6 @@ async def main():
         "在手机A上打开微信，在平板上播放YouTube",
         "把手机上的照片发到电脑",
         "在电脑上打开Chrome并搜索Python教程",
-        "分析电脑屏幕上的内容，告诉我这个图表是关于什么的", # 新增 VLM 测试用例
-        "帮我看看手机A上微信的聊天记录，总结一下最近的讨论点" # 跨设备 VLM 测试用例
         "打开微信",  # 没有指定设备
         "关闭它",    # 需要上下文
     ]

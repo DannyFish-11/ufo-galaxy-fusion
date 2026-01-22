@@ -1,4 +1,14 @@
+# Core Web Framework
 fastapi>=0.104.0
 uvicorn>=0.24.0
-httpx>=0.25.0
 pydantic>=2.5.0
+
+# HTTP Client
+httpx>=0.25.0
+aiohttp>=3.9.0
+
+# AI/LLM Integration
+openai>=2.0.0
+
+# Async Support
+asyncio-mqtt>=0.16.0
