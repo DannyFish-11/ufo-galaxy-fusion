@@ -787,3 +787,70 @@ async def clear_session(session_id: str):
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8080)
+
+
+# =============================================================================
+# Academic Extension API Endpoints
+# =============================================================================
+
+from academic_extension import academic_manager, PaperNote, CitationNetwork
+
+@app.post("/academic/paper_note")
+async def save_academic_paper_note(paper: PaperNote):
+    """保存论文笔记"""
+    success = await academic_manager.save_paper_note(paper)
+    return {
+        "success": success,
+        "paper_id": paper.paper_id,
+        "title": paper.title
+    }
+
+@app.get("/academic/paper_notes")
+async def search_academic_paper_notes(
+    query: str = Query(default="", description="搜索关键词"),
+    tags: Optional[str] = Query(default=None, description="标签（逗号分隔）")
+):
+    """搜索论文笔记"""
+    tag_list = tags.split(",") if tags else None
+    memos = await academic_manager.search_paper_notes(query, tag_list)
+    return {
+        "query": query,
+        "tags": tag_list,
+        "count": len(memos),
+        "papers": memos
+    }
+
+@app.get("/academic/citation_network/{paper_id}")
+async def get_academic_citation_network(paper_id: str):
+    """获取论文引用网络"""
+    network = await academic_manager.get_citation_network(paper_id)
+    return network.dict()
+
+@app.get("/academic/papers_by_tag/{tag}")
+async def get_academic_papers_by_tag(tag: str):
+    """根据标签获取论文"""
+    papers = await academic_manager.get_papers_by_tag(tag)
+    return {
+        "tag": tag,
+        "count": len(papers),
+        "papers": papers
+    }
+
+@app.get("/academic/recent_papers")
+async def get_academic_recent_papers(days: int = Query(default=7, ge=1, le=30)):
+    """获取最近的论文笔记"""
+    papers = await academic_manager.get_recent_papers(days)
+    return {
+        "days": days,
+        "count": len(papers),
+        "papers": papers
+    }
+
+@app.post("/academic/export_bibtex")
+async def export_academic_bibtex(paper_ids: List[str]):
+    """导出论文为 BibTeX 格式"""
+    bibtex = await academic_manager.export_papers_to_bibtex(paper_ids)
+    return {
+        "count": len(paper_ids),
+        "bibtex": bibtex
+    }
