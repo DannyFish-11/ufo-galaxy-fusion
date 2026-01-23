@@ -2,656 +2,951 @@
   "nodes": {
     "Node_00_StateMachine": {
       "port": 8000,
+      "group": "core",
+      "priority": 1,
       "dependencies": [],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_00_StateMachine"
     },
     "Node_01_OneAPI": {
       "port": 8001,
+      "group": "core",
+      "priority": 1,
       "dependencies": [],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_01_OneAPI"
     },
     "Node_02_Tasker": {
       "port": 8002,
-      "dependencies": [],
+      "group": "core",
+      "priority": 1,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_02_Tasker"
     },
     "Node_03_SecretVault": {
       "port": 8003,
-      "dependencies": [],
+      "group": "core",
+      "priority": 1,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_03_SecretVault"
     },
     "Node_04_Router": {
       "port": 8004,
-      "dependencies": [],
+      "group": "core",
+      "priority": 1,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_04_Router"
     },
     "Node_05_Auth": {
       "port": 8005,
-      "dependencies": [],
+      "group": "core",
+      "priority": 1,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_05_Auth"
     },
     "Node_06_Filesystem": {
       "port": 8006,
-      "dependencies": [],
+      "group": "core",
+      "priority": 2,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_06_Filesystem"
     },
     "Node_07_Git": {
       "port": 8007,
-      "dependencies": [],
+      "group": "core",
+      "priority": 2,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_07_Git"
     },
     "Node_08_Fetch": {
       "port": 8008,
-      "dependencies": [],
+      "group": "core",
+      "priority": 2,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_08_Fetch"
     },
     "Node_09_Sandbox": {
       "port": 8009,
-      "dependencies": [],
+      "group": "core",
+      "priority": 2,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_09_Sandbox"
     },
     "Node_100_MemorySystem": {
       "port": 8100,
-      "dependencies": [],
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_100_MemorySystem"
     },
     "Node_101_CodeEngine": {
       "port": 8101,
-      "dependencies": [],
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_101_CodeEngine"
     },
     "Node_102_DebugOptimize": {
       "port": 8102,
-      "dependencies": [],
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_102_DebugOptimize"
     },
     "Node_103_KnowledgeGraph": {
       "port": 8103,
-      "dependencies": [],
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_103_KnowledgeGraph"
     },
     "Node_104_AgentCPM": {
       "port": 8104,
-      "dependencies": [],
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_104_AgentCPM"
     },
     "Node_105_UnifiedKnowledgeBase": {
       "port": 8105,
-      "dependencies": [],
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_105_UnifiedKnowledgeBase"
     },
     "Node_106_GitHubFlow": {
       "port": 8106,
-      "dependencies": [],
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_106_GitHubFlow"
     },
     "Node_10_Slack": {
       "port": 8010,
-      "dependencies": [],
+      "group": "development",
+      "priority": 3,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_10_Slack"
     },
     "Node_11_GitHub": {
       "port": 8011,
-      "dependencies": [],
+      "group": "development",
+      "priority": 3,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_11_GitHub"
     },
     "Node_12_Postgres": {
       "port": 8012,
-      "dependencies": [],
+      "group": "development",
+      "priority": 3,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_12_Postgres"
     },
     "Node_13_SQLite": {
       "port": 8013,
-      "dependencies": [],
+      "group": "development",
+      "priority": 3,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_13_SQLite"
     },
     "Node_14_FFmpeg": {
       "port": 8014,
-      "dependencies": [],
+      "group": "development",
+      "priority": 3,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_14_FFmpeg"
     },
     "Node_15_OCR": {
       "port": 8015,
-      "dependencies": [],
+      "group": "development",
+      "priority": 3,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_15_OCR"
     },
     "Node_16_Email": {
       "port": 8016,
-      "dependencies": [],
+      "group": "development",
+      "priority": 3,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_16_Email"
     },
     "Node_17_EdgeTTS": {
       "port": 8017,
-      "dependencies": [],
+      "group": "development",
+      "priority": 3,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_17_EdgeTTS"
     },
     "Node_18_DeepL": {
       "port": 8018,
-      "dependencies": [],
+      "group": "development",
+      "priority": 3,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_18_DeepL"
     },
     "Node_19_Crypto": {
       "port": 8019,
-      "dependencies": [],
+      "group": "development",
+      "priority": 3,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_19_Crypto"
     },
     "Node_20_Qdrant": {
       "port": 8020,
-      "dependencies": [],
+      "group": "development",
+      "priority": 3,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_20_Qdrant"
     },
     "Node_21_Notion": {
       "port": 8021,
-      "dependencies": [],
+      "group": "development",
+      "priority": 3,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_21_Notion"
     },
     "Node_22_BraveSearch": {
       "port": 8022,
-      "dependencies": [],
+      "group": "development",
+      "priority": 3,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_22_BraveSearch"
     },
     "Node_23_Calendar": {
       "port": 8023,
-      "dependencies": [],
+      "group": "development",
+      "priority": 3,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_23_Calendar"
     },
     "Node_23_Time": {
       "port": 8023,
-      "dependencies": [],
+      "group": "development",
+      "priority": 3,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_23_Time"
     },
     "Node_24_Weather": {
       "port": 8024,
-      "dependencies": [],
+      "group": "development",
+      "priority": 3,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_24_Weather"
     },
     "Node_25_GoogleSearch": {
       "port": 8025,
-      "dependencies": [],
+      "group": "development",
+      "priority": 3,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_25_GoogleSearch"
     },
     "Node_28_Reserved": {
       "port": 8028,
-      "dependencies": [],
+      "group": "development",
+      "priority": 3,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_28_Reserved"
     },
     "Node_29_Reserved": {
       "port": 8029,
-      "dependencies": [],
+      "group": "development",
+      "priority": 3,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_29_Reserved"
     },
     "Node_30_Reserved": {
       "port": 8030,
-      "dependencies": [],
+      "group": "development",
+      "priority": 3,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_30_Reserved"
     },
     "Node_31_Reserved": {
       "port": 8031,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_31_Reserved"
     },
     "Node_32_Reserved": {
       "port": 8032,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_32_Reserved"
     },
     "Node_33_ADB": {
       "port": 8033,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_33_ADB"
     },
     "Node_34_Scrcpy": {
       "port": 8034,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_34_Scrcpy"
     },
     "Node_35_AppleScript": {
       "port": 8035,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_35_AppleScript"
     },
     "Node_36_UIAWindows": {
       "port": 8036,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_36_UIAWindows"
     },
     "Node_37_LinuxDBus": {
       "port": 8037,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_37_LinuxDBus"
     },
     "Node_38_BLE": {
       "port": 8038,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_38_BLE"
     },
     "Node_39_SSH": {
       "port": 8039,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_39_SSH"
     },
     "Node_40_SFTP": {
       "port": 8040,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_40_SFTP"
     },
     "Node_41_MQTT": {
       "port": 8041,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_41_MQTT"
     },
     "Node_42_CANbus": {
       "port": 8042,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_42_CANbus"
     },
     "Node_43_MAVLink": {
       "port": 8043,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_43_MAVLink"
     },
     "Node_44_NFC": {
       "port": 8044,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_44_NFC"
     },
     "Node_45_DesktopAuto": {
       "port": 8045,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_45_DesktopAuto"
     },
     "Node_46_Camera": {
       "port": 8046,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_46_Camera"
     },
     "Node_47_Audio": {
       "port": 8047,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_47_Audio"
     },
     "Node_48_MediaGen": {
       "port": 8048,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_48_MediaGen"
     },
     "Node_48_Serial": {
       "port": 8048,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_48_Serial"
     },
     "Node_49_OctoPrint": {
       "port": 8049,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_49_OctoPrint"
     },
     "Node_50_Transformer": {
       "port": 8050,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_50_Transformer"
     },
     "Node_51_QuantumDispatcher": {
       "port": 8051,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_51_QuantumDispatcher"
     },
     "Node_52_QiskitSimulator": {
       "port": 8052,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_52_QiskitSimulator"
     },
     "Node_53_GraphLogic": {
       "port": 8053,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_53_GraphLogic"
     },
     "Node_54_SymbolicMath": {
       "port": 8054,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_54_SymbolicMath"
     },
     "Node_56_AgentSwarm": {
       "port": 8056,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_56_AgentSwarm"
     },
     "Node_56_Planning": {
       "port": 8056,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_56_Planning"
     },
     "Node_57_QuantumCloud": {
       "port": 8057,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_57_QuantumCloud"
     },
     "Node_58_ModelRouter": {
       "port": 8058,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_58_ModelRouter"
     },
     "Node_59_CausalInference": {
       "port": 8059,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_59_CausalInference"
     },
     "Node_61_GeometricReasoning": {
       "port": 8061,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_61_GeometricReasoning"
     },
     "Node_62_ProbabilisticProgramming": {
       "port": 8062,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_62_ProbabilisticProgramming"
     },
     "Node_64_Telemetry": {
       "port": 8064,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_64_Telemetry"
     },
     "Node_65_LoggerCentral": {
       "port": 8065,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_65_LoggerCentral"
     },
     "Node_66_ConfigManager": {
       "port": 8066,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_66_ConfigManager"
     },
     "Node_67_HealthMonitor": {
       "port": 8067,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_67_HealthMonitor"
     },
     "Node_68_Security": {
       "port": 8068,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_68_Security"
     },
     "Node_69_BackupRestore": {
       "port": 8069,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_69_BackupRestore"
     },
     "Node_70_BambuLab": {
       "port": 8070,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_70_BambuLab"
     },
     "Node_71_MediaGen": {
       "port": 8071,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_71_MediaGen"
     },
     "Node_72_KnowledgeBase": {
       "port": 8072,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_72_KnowledgeBase"
     },
     "Node_73_Learning": {
       "port": 8073,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_73_Learning"
     },
     "Node_74_DigitalTwin": {
       "port": 8074,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_74_DigitalTwin"
     },
     "Node_79_LocalLLM": {
       "port": 8079,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_79_LocalLLM"
     },
     "Node_80_MemorySystem": {
       "port": 8080,
-      "dependencies": [],
+      "group": "extended",
+      "priority": 4,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_80_MemorySystem"
     },
     "Node_81_Orchestrator": {
       "port": 8081,
-      "dependencies": [],
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_81_Orchestrator"
     },
     "Node_82_NetworkGuard": {
       "port": 8082,
-      "dependencies": [],
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_82_NetworkGuard"
     },
     "Node_83_NewsAggregator": {
       "port": 8083,
-      "dependencies": [],
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_83_NewsAggregator"
     },
     "Node_84_StockTracker": {
       "port": 8084,
-      "dependencies": [],
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_84_StockTracker"
     },
     "Node_85_PromptLibrary": {
       "port": 8085,
-      "dependencies": [],
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_85_PromptLibrary"
     },
     "Node_90_MultimodalVision": {
       "port": 8090,
-      "dependencies": [],
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_90_MultimodalVision"
     },
     "Node_91_MultimodalAgent": {
       "port": 8091,
-      "dependencies": [],
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_91_MultimodalAgent"
     },
     "Node_92_AutoControl": {
       "port": 8092,
-      "dependencies": [],
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_92_AutoControl"
     },
     "Node_95_WebRTC_Receiver": {
       "port": 8095,
-      "dependencies": [],
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_95_WebRTC_Receiver"
     },
     "Node_96_SmartTransportRouter": {
       "port": 8096,
-      "dependencies": [],
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_96_SmartTransportRouter"
     },
     "Node_97_AcademicSearch": {
       "port": 8097,
-      "dependencies": [],
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_97_AcademicSearch"
     }
   },
-  "startup_order": [
-    "Node_00_StateMachine",
-    "Node_01_OneAPI",
-    "Node_02_Tasker",
-    "Node_03_SecretVault",
-    "Node_04_Router",
-    "Node_05_Auth",
-    "Node_06_Filesystem",
-    "Node_07_Git",
-    "Node_08_Fetch",
-    "Node_09_Sandbox",
-    "Node_100_MemorySystem",
-    "Node_101_CodeEngine",
-    "Node_102_DebugOptimize",
-    "Node_103_KnowledgeGraph",
-    "Node_104_AgentCPM",
-    "Node_105_UnifiedKnowledgeBase",
-    "Node_106_GitHubFlow",
-    "Node_10_Slack",
-    "Node_11_GitHub",
-    "Node_12_Postgres",
-    "Node_13_SQLite",
-    "Node_14_FFmpeg",
-    "Node_15_OCR",
-    "Node_16_Email",
-    "Node_17_EdgeTTS",
-    "Node_18_DeepL",
-    "Node_19_Crypto",
-    "Node_20_Qdrant",
-    "Node_21_Notion",
-    "Node_22_BraveSearch",
-    "Node_23_Calendar",
-    "Node_23_Time",
-    "Node_24_Weather",
-    "Node_25_GoogleSearch",
-    "Node_28_Reserved",
-    "Node_29_Reserved",
-    "Node_30_Reserved",
-    "Node_31_Reserved",
-    "Node_32_Reserved",
-    "Node_33_ADB",
-    "Node_34_Scrcpy",
-    "Node_35_AppleScript",
-    "Node_36_UIAWindows",
-    "Node_37_LinuxDBus",
-    "Node_38_BLE",
-    "Node_39_SSH",
-    "Node_40_SFTP",
-    "Node_41_MQTT",
-    "Node_42_CANbus",
-    "Node_43_MAVLink",
-    "Node_44_NFC",
-    "Node_45_DesktopAuto",
-    "Node_46_Camera",
-    "Node_47_Audio",
-    "Node_48_MediaGen",
-    "Node_48_Serial",
-    "Node_49_OctoPrint",
-    "Node_50_Transformer",
-    "Node_51_QuantumDispatcher",
-    "Node_52_QiskitSimulator",
-    "Node_53_GraphLogic",
-    "Node_54_SymbolicMath",
-    "Node_56_AgentSwarm",
-    "Node_56_Planning",
-    "Node_57_QuantumCloud",
-    "Node_58_ModelRouter",
-    "Node_59_CausalInference",
-    "Node_61_GeometricReasoning",
-    "Node_62_ProbabilisticProgramming",
-    "Node_64_Telemetry",
-    "Node_65_LoggerCentral",
-    "Node_66_ConfigManager",
-    "Node_67_HealthMonitor",
-    "Node_68_Security",
-    "Node_69_BackupRestore",
-    "Node_70_BambuLab",
-    "Node_71_MediaGen",
-    "Node_72_KnowledgeBase",
-    "Node_73_Learning",
-    "Node_74_DigitalTwin",
-    "Node_79_LocalLLM",
-    "Node_80_MemorySystem",
-    "Node_81_Orchestrator",
-    "Node_82_NetworkGuard",
-    "Node_83_NewsAggregator",
-    "Node_84_StockTracker",
-    "Node_85_PromptLibrary",
-    "Node_90_MultimodalVision",
-    "Node_91_MultimodalAgent",
-    "Node_92_AutoControl",
-    "Node_95_WebRTC_Receiver",
-    "Node_96_SmartTransportRouter",
-    "Node_97_AcademicSearch"
-  ]
+  "groups": {
+    "core": {
+      "name": "核心节点",
+      "description": "系统核心基础设施和服务",
+      "startup_delay": 2
+    },
+    "development": {
+      "name": "开发工具节点",
+      "description": "代码、文件、搜索等开发工具",
+      "startup_delay": 1
+    },
+    "extended": {
+      "name": "扩展功能节点",
+      "description": "设备控制、多媒体处理等扩展功能",
+      "startup_delay": 1
+    },
+    "academic": {
+      "name": "学术研究节点",
+      "description": "知识图谱、学术搜索等研究功能",
+      "startup_delay": 1
+    }
+  }
 }
