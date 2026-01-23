@@ -1,4 +1,26 @@
 {
+  "groups": {
+    "core": {
+      "name": "核心节点",
+      "description": "系统核心基础设施和服务",
+      "startup_delay": 2
+    },
+    "development": {
+      "name": "开发工具节点",
+      "description": "代码、文件、搜索等开发工具",
+      "startup_delay": 1
+    },
+    "extended": {
+      "name": "扩展功能节点",
+      "description": "设备控制、多媒体处理等扩展功能",
+      "startup_delay": 1
+    },
+    "academic": {
+      "name": "学术研究节点",
+      "description": "知识图谱、学术搜索等研究功能",
+      "startup_delay": 1
+    }
+  },
   "nodes": {
     "Node_00_StateMachine": {
       "port": 8000,
@@ -95,76 +117,6 @@
       ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_09_Sandbox"
-    },
-    "Node_100_MemorySystem": {
-      "port": 8100,
-      "group": "academic",
-      "priority": 5,
-      "dependencies": [
-        "Node_01_OneAPI"
-      ],
-      "optional_dependencies": [],
-      "description": "Auto-generated config for Node_100_MemorySystem"
-    },
-    "Node_101_CodeEngine": {
-      "port": 8101,
-      "group": "academic",
-      "priority": 5,
-      "dependencies": [
-        "Node_01_OneAPI"
-      ],
-      "optional_dependencies": [],
-      "description": "Auto-generated config for Node_101_CodeEngine"
-    },
-    "Node_102_DebugOptimize": {
-      "port": 8102,
-      "group": "academic",
-      "priority": 5,
-      "dependencies": [
-        "Node_01_OneAPI"
-      ],
-      "optional_dependencies": [],
-      "description": "Auto-generated config for Node_102_DebugOptimize"
-    },
-    "Node_103_KnowledgeGraph": {
-      "port": 8103,
-      "group": "academic",
-      "priority": 5,
-      "dependencies": [
-        "Node_01_OneAPI"
-      ],
-      "optional_dependencies": [],
-      "description": "Auto-generated config for Node_103_KnowledgeGraph"
-    },
-    "Node_104_AgentCPM": {
-      "port": 8104,
-      "group": "academic",
-      "priority": 5,
-      "dependencies": [
-        "Node_01_OneAPI"
-      ],
-      "optional_dependencies": [],
-      "description": "Auto-generated config for Node_104_AgentCPM"
-    },
-    "Node_105_UnifiedKnowledgeBase": {
-      "port": 8105,
-      "group": "academic",
-      "priority": 5,
-      "dependencies": [
-        "Node_01_OneAPI"
-      ],
-      "optional_dependencies": [],
-      "description": "Auto-generated config for Node_105_UnifiedKnowledgeBase"
-    },
-    "Node_106_GitHubFlow": {
-      "port": 8106,
-      "group": "academic",
-      "priority": 5,
-      "dependencies": [
-        "Node_01_OneAPI"
-      ],
-      "optional_dependencies": [],
-      "description": "Auto-generated config for Node_106_GitHubFlow"
     },
     "Node_10_Slack": {
       "port": 8010,
@@ -307,7 +259,7 @@
       "description": "Auto-generated config for Node_23_Calendar"
     },
     "Node_23_Time": {
-      "port": 8023,
+      "port": 9000,
       "group": "development",
       "priority": 3,
       "dependencies": [
@@ -547,7 +499,7 @@
       "description": "Auto-generated config for Node_48_MediaGen"
     },
     "Node_48_Serial": {
-      "port": 8048,
+      "port": 9001,
       "group": "extended",
       "priority": 4,
       "dependencies": [
@@ -627,7 +579,7 @@
       "description": "Auto-generated config for Node_56_AgentSwarm"
     },
     "Node_56_Planning": {
-      "port": 8056,
+      "port": 9002,
       "group": "extended",
       "priority": 4,
       "dependencies": [
@@ -925,28 +877,76 @@
       ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_97_AcademicSearch"
-    }
-  },
-  "groups": {
-    "core": {
-      "name": "核心节点",
-      "description": "系统核心基础设施和服务",
-      "startup_delay": 2
     },
-    "development": {
-      "name": "开发工具节点",
-      "description": "代码、文件、搜索等开发工具",
-      "startup_delay": 1
+    "Node_100_MemorySystem": {
+      "port": 8100,
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
+      "optional_dependencies": [],
+      "description": "Auto-generated config for Node_100_MemorySystem"
     },
-    "extended": {
-      "name": "扩展功能节点",
-      "description": "设备控制、多媒体处理等扩展功能",
-      "startup_delay": 1
+    "Node_101_CodeEngine": {
+      "port": 8101,
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
+      "optional_dependencies": [],
+      "description": "Auto-generated config for Node_101_CodeEngine"
     },
-    "academic": {
-      "name": "学术研究节点",
-      "description": "知识图谱、学术搜索等研究功能",
-      "startup_delay": 1
+    "Node_102_DebugOptimize": {
+      "port": 8102,
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
+      "optional_dependencies": [],
+      "description": "Auto-generated config for Node_102_DebugOptimize"
+    },
+    "Node_103_KnowledgeGraph": {
+      "port": 8103,
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
+      "optional_dependencies": [],
+      "description": "Auto-generated config for Node_103_KnowledgeGraph"
+    },
+    "Node_104_AgentCPM": {
+      "port": 8104,
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
+      "optional_dependencies": [],
+      "description": "Auto-generated config for Node_104_AgentCPM"
+    },
+    "Node_105_UnifiedKnowledgeBase": {
+      "port": 8105,
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
+      "optional_dependencies": [],
+      "description": "Auto-generated config for Node_105_UnifiedKnowledgeBase"
+    },
+    "Node_106_GitHubFlow": {
+      "port": 8106,
+      "group": "academic",
+      "priority": 5,
+      "dependencies": [
+        "Node_01_OneAPI"
+      ],
+      "optional_dependencies": [],
+      "description": "Auto-generated config for Node_106_GitHubFlow"
     }
   }
 }
