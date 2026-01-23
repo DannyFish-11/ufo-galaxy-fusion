@@ -1,0 +1,170 @@
+{
+  "nodes": {
+    "Node_00_StateMachine": {
+      "port": 8000,
+      "priority": 1,
+      "dependencies": [],
+      "required": true,
+      "group": "core",
+      "description": "状态机节点，管理系统状态"
+    },
+    "Node_01_OneAPI": {
+      "port": 8001,
+      "priority": 1,
+      "dependencies": [],
+      "required": true,
+      "group": "core",
+      "description": "统一 API 接口"
+    },
+    "Node_02_Tasker": {
+      "port": 8002,
+      "priority": 2,
+      "dependencies": ["Node_00_StateMachine"],
+      "required": true,
+      "group": "core",
+      "description": "任务调度器"
+    },
+    "Node_03_Router": {
+      "port": 8003,
+      "priority": 2,
+      "dependencies": ["Node_00_StateMachine"],
+      "required": true,
+      "group": "core",
+      "description": "路由管理器"
+    },
+    "Node_04_Auth": {
+      "port": 8004,
+      "priority": 1,
+      "dependencies": [],
+      "required": true,
+      "group": "core",
+      "description": "认证服务"
+    },
+    "Node_05_Filesystem": {
+      "port": 8005,
+      "priority": 1,
+      "dependencies": [],
+      "required": true,
+      "group": "core",
+      "description": "文件系统管理"
+    },
+    "Node_07_Git": {
+      "port": 8007,
+      "priority": 3,
+      "dependencies": [],
+      "required": false,
+      "group": "development",
+      "description": "Git 操作"
+    },
+    "Node_11_GitHub": {
+      "port": 8011,
+      "priority": 3,
+      "dependencies": ["Node_07_Git"],
+      "required": false,
+      "group": "development",
+      "description": "GitHub API 集成"
+    },
+    "Node_20_Email": {
+      "port": 8020,
+      "priority": 4,
+      "dependencies": [],
+      "required": false,
+      "group": "extended",
+      "description": "邮件服务"
+    },
+    "Node_30_Browser": {
+      "port": 8030,
+      "priority": 4,
+      "dependencies": [],
+      "required": false,
+      "group": "extended",
+      "description": "浏览器自动化"
+    },
+    "Node_40_Scheduler": {
+      "port": 8040,
+      "priority": 3,
+      "dependencies": ["Node_02_Tasker"],
+      "required": false,
+      "group": "extended",
+      "description": "定时任务调度"
+    },
+    "Node_50_Logger": {
+      "port": 8050,
+      "priority": 2,
+      "dependencies": [],
+      "required": false,
+      "group": "extended",
+      "description": "日志管理"
+    },
+    "Node_80_MemorySystem": {
+      "port": 8080,
+      "priority": 3,
+      "dependencies": [],
+      "required": false,
+      "group": "extended",
+      "description": "记忆系统（Memos 集成）"
+    },
+    "Node_96_SmartTransportRouter": {
+      "port": 8096,
+      "priority": 4,
+      "dependencies": ["Node_03_Router"],
+      "required": false,
+      "group": "extended",
+      "description": "智能传输路由"
+    },
+    "Node_97_AcademicSearch": {
+      "port": 8097,
+      "priority": 3,
+      "dependencies": [],
+      "required": false,
+      "group": "academic",
+      "description": "学术搜索（arXiv, Semantic Scholar, PubMed）"
+    },
+    "Node_104_AgentCPM": {
+      "port": 8104,
+      "priority": 4,
+      "dependencies": ["Node_97_AcademicSearch"],
+      "required": false,
+      "group": "academic",
+      "description": "AgentCPM 深度研究"
+    },
+    "Node_105_UnifiedKnowledgeBase": {
+      "port": 8105,
+      "priority": 3,
+      "dependencies": [],
+      "required": false,
+      "group": "academic",
+      "description": "统一知识库（RAG + 向量数据库）"
+    },
+    "Node_106_GitHubFlow": {
+      "port": 8106,
+      "priority": 4,
+      "dependencies": ["Node_11_GitHub", "Node_105_UnifiedKnowledgeBase"],
+      "required": false,
+      "group": "development",
+      "description": "GitHub 工作流自动化"
+    }
+  },
+  "groups": {
+    "core": {
+      "name": "核心系统",
+      "description": "系统运行的最小必需节点",
+      "startup_delay": 2
+    },
+    "academic": {
+      "name": "学术研究系统",
+      "description": "学术搜索、报告生成、知识管理",
+      "startup_delay": 3
+    },
+    "development": {
+      "name": "开发工作流系统",
+      "description": "Git、GitHub 自动化、代码生成",
+      "startup_delay": 3
+    },
+    "extended": {
+      "name": "扩展功能",
+      "description": "邮件、浏览器、调度器等扩展功能",
+      "startup_delay": 4
+    }
+  }
+}
