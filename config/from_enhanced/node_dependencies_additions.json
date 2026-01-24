@@ -1,0 +1,149 @@
+{
+  "nodes": [
+    {
+      "id": 108,
+      "name": "MetaCognition",
+      "description": "元认知节点 - 反思思考过程，评估决策质量，优化策略",
+      "port": 9100,
+      "category": "Intelligence Enhancement",
+      "dependencies": [
+        "Node_01_OneAPI",
+        "Node_103_KnowledgeGraph",
+        "Node_73_Learning"
+      ],
+      "required_env_vars": [
+        "OPENAI_API_KEY"
+      ],
+      "capabilities": [
+        "thought_tracking",
+        "decision_evaluation",
+        "strategy_optimization",
+        "cognitive_bias_detection"
+      ],
+      "api_endpoints": [
+        "POST /api/v1/reflect",
+        "POST /api/v1/evaluate_decision",
+        "POST /api/v1/optimize_strategy",
+        "GET /api/v1/cognitive_state"
+      ]
+    },
+    {
+      "id": 109,
+      "name": "ProactiveSensing",
+      "description": "主动感知节点 - 主动发现环境变化、潜在问题和优化机会",
+      "port": 9101,
+      "category": "Intelligence Enhancement",
+      "dependencies": [
+        "Node_22_BraveSearch",
+        "Node_25_GoogleSearch",
+        "Node_108_MetaCognition"
+      ],
+      "required_env_vars": [
+        "BRAVE_API_KEY"
+      ],
+      "capabilities": [
+        "environment_monitoring",
+        "anomaly_detection",
+        "opportunity_discovery",
+        "proactive_alerting"
+      ],
+      "api_endpoints": [
+        "POST /api/v1/scan_environment",
+        "POST /api/v1/detect_anomalies",
+        "POST /api/v1/discover_opportunities",
+        "GET /api/v1/alerts"
+      ]
+    },
+    {
+      "id": 113,
+      "name": "ExternalToolWrapper",
+      "description": "通用工具包装器 - 动态学习和使用任何 CLI 工具",
+      "port": 9102,
+      "category": "Tool Integration",
+      "dependencies": [
+        "Node_22_BraveSearch",
+        "Node_01_OneAPI",
+        "Node_09_Sandbox",
+        "Node_73_Learning"
+      ],
+      "required_env_vars": [
+        "OPENAI_API_KEY"
+      ],
+      "capabilities": [
+        "tool_discovery",
+        "documentation_parsing",
+        "dynamic_command_generation",
+        "execution_validation"
+      ],
+      "api_endpoints": [
+        "POST /api/v1/use_tool",
+        "POST /api/v1/learn_tool",
+        "GET /api/v1/known_tools",
+        "DELETE /api/v1/forget_tool"
+      ]
+    },
+    {
+      "id": 114,
+      "name": "OpenCode",
+      "description": "OpenCode 专用节点 - 深度集成 OpenCode AI 编程工具",
+      "port": 9103,
+      "category": "Tool Integration",
+      "dependencies": [
+        "Node_03_SecretVault",
+        "Node_09_Sandbox",
+        "Node_102_DebugOptimize"
+      ],
+      "required_env_vars": [
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY"
+      ],
+      "capabilities": [
+        "multi_model_code_generation",
+        "auto_configuration",
+        "code_quality_validation",
+        "deep_system_integration"
+      ],
+      "api_endpoints": [
+        "POST /api/v1/generate_code",
+        "POST /api/v1/configure",
+        "GET /api/v1/status",
+        "GET /api/v1/supported_models"
+      ]
+    },
+    {
+      "id": 115,
+      "name": "NodeFactory",
+      "description": "节点工厂 - 自主编写和加载新节点，实现系统自我进化",
+      "port": 9104,
+      "category": "Self Evolution",
+      "dependencies": [
+        "Node_101_CodeEngine",
+        "Node_102_DebugOptimize",
+        "Node_108_MetaCognition"
+      ],
+      "required_env_vars": [
+        "OPENAI_API_KEY"
+      ],
+      "capabilities": [
+        "node_requirement_analysis",
+        "automatic_code_generation",
+        "sandbox_testing",
+        "dynamic_node_loading"
+      ],
+      "api_endpoints": [
+        "POST /api/v1/create_node",
+        "POST /api/v1/test_node",
+        "POST /api/v1/deploy_node",
+        "GET /api/v1/created_nodes"
+      ]
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "created_date": "2026-01-24",
+    "author": "Manus AI",
+    "description": "Enhanced nodes for UFO³ Galaxy system - Intelligence Enhancement and Tool Integration",
+    "total_nodes": 5,
+    "port_range": "9100-9104"
+  }
+}
