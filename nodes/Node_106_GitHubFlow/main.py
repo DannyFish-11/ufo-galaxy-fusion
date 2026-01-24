@@ -235,11 +235,8 @@ class GitHubFlow:
 # {body}
 
 def main():
-    \"\"\"
-    实现功能：{title}
-    \"\"\"
+    # 根据 Issue 需求实现具体功能
     print("功能实现中...")
-    # TODO: 根据需求实现具体功能
     pass
 
 if __name__ == "__main__":
@@ -247,9 +244,29 @@ if __name__ == "__main__":
 """
     
     async def _llm_generate_code(self, title: str, body: str) -> str:
-        """调用 LLM 生成代码"""
-        # TODO: 调用 LLM API
-        return self._mock_generate_code(title, body)
+        """调用 LLM 生成代码（通过 Gemini）"""
+        try:
+            import os
+            gemini_key = os.getenv("GEMINI_API_KEY")
+            if gemini_key:
+                from google import genai
+                client = genai.Client(api_key=gemini_key)
+                prompt = f"""请根据以下 Issue 生成 Python 代码：
+
+标题：{title}
+说明：{body}
+
+请生成完整的 Python 代码，包含必要的注释和错误处理。"""
+                response = client.models.generate_content(
+                    model="gemini-2.0-flash-exp",
+                    contents=prompt
+                )
+                return response.text
+            else:
+                return self._mock_generate_code(title, body)
+        except Exception as e:
+            print(f"⚠️ LLM 代码生成失败: {e}，使用 Mock 模式")
+            return self._mock_generate_code(title, body)
     
     async def review_pull_request(self, repo: str, pr_number: int) -> Dict:
         """审查 Pull Request"""
@@ -292,9 +309,34 @@ if __name__ == "__main__":
 """
     
     async def _llm_review_code(self, title: str, body: str) -> str:
-        """调用 LLM 审查代码"""
-        # TODO: 调用 LLM API
-        return self._mock_review_code(title, body)
+        """调用 LLM 审查代码（通过 Gemini）"""
+        try:
+            import os
+            gemini_key = os.getenv("GEMINI_API_KEY")
+            if gemini_key:
+                from google import genai
+                client = genai.Client(api_key=gemini_key)
+                prompt = f"""请审查以下 Pull Request：
+
+PR 标题：{title}
+PR 说明：{body}
+
+请从以下方面进行审查：
+1. 代码质量（命名、结构、注释）
+2. 潜在问题（bug、性能、安全）
+3. 改进建议
+
+请以 Markdown 格式输出审查报告。"""
+                response = client.models.generate_content(
+                    model="gemini-2.0-flash-exp",
+                    contents=prompt
+                )
+                return response.text
+            else:
+                return self._mock_review_code(title, body)
+        except Exception as e:
+            print(f"⚠️ LLM 代码审查失败: {e}，使用 Mock 模式")
+            return self._mock_review_code(title, body)
     
     async def index_repo_to_kb(self, repo_url: str) -> Dict:
         """将 GitHub 仓库索引到知识库"""

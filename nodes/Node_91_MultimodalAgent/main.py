@@ -91,10 +91,21 @@ async def call_node(url: str, endpoint: str, data: dict) -> dict:
 # ============================================================================
 
 async def understand_command(command: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """理解命令"""
-    # TODO: 调用 Node_50_Transformer (NLU)
-    # 暂时使用简单的规则
+    """理解命令（通过 Node_50 NLU）"""
+    # 尝试调用 Node_50_Transformer (NLU)
+    try:
+        result = await call_node(NODE_50_NLU_URL, "/understand", {
+            "text": command,
+            "context": context or {}
+        })
+        
+        if result.get("success"):
+            # Node_50 成功返回
+            return result.get("intent", {})
+    except Exception as e:
+        print(f"Failed to call Node_50: {e}")
     
+    # 降级方案：使用简单的规则匹配
     intent = {
         "command": command,
         "action": "unknown",

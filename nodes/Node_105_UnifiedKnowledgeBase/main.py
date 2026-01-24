@@ -284,9 +284,39 @@ class UnifiedKnowledgeBase:
         if self.use_mock:
             return self.search_keyword(query, top_k)
         
-        # 真实模式：使用向量数据库
-        # TODO: 实现真实的向量搜索
-        return []
+        # 真实模式：使用向量数据库（Chroma）
+        try:
+            import chromadb
+            from chromadb.utils import embedding_functions
+            
+            # 初始化 Chroma
+            client = chromadb.PersistentClient(path=self.persist_dir)
+            embedding_function = embedding_functions.DefaultEmbeddingFunction()
+            collection = client.get_or_create_collection(
+                name="unified_kb",
+                embedding_function=embedding_function
+            )
+            
+            # 搜索
+            results = collection.query(
+                query_texts=[query],
+                n_results=top_k
+            )
+            
+            # 转换为 KnowledgeEntry
+            entries = []
+            if results['ids'] and results['ids'][0]:
+                for i, entry_id in enumerate(results['ids'][0]):
+                    if entry_id in self.knowledge_entries:
+                        entries.append(self.knowledge_entries[entry_id])
+            
+            return entries
+        except ImportError:
+            print("⚠️ Chroma 未安装，降级为关键词搜索")
+            return self.search_keyword(query, top_k)
+        except Exception as e:
+            print(f"⚠️ 向量搜索失败: {e}，降级为关键词搜索")
+            return self.search_keyword(query, top_k)
     
     def search_hybrid(self, query: str, top_k: int = 5) -> List[KnowledgeEntry]:
         """混合搜索"""
@@ -325,9 +355,24 @@ class UnifiedKnowledgeBase:
         if self.use_mock:
             answer = f"根据知识库中的 {len(relevant_entries)} 条相关信息，我找到了以下内容：\n\n{context}"
         else:
-            # 真实模式：调用 LLM 生成答案
-            # TODO: 实现 LLM 调用
-            answer = "（需要配置 LLM）"
+            # 真实模式：调用 LLM 生成答案（通过 Node_50 或 Gemini）
+            try:
+                # 尝试调用 Gemini API
+                import os
+                gemini_key = os.getenv("GEMINI_API_KEY")
+                if gemini_key:
+                    from google import genai
+                    client = genai.Client(api_key=gemini_key)
+                    prompt = f"问题：{question}\n\n相关知识：\n{context}\n\n请根据上述知识回答问题。"
+                    response = client.models.generate_content(
+                        model="gemini-2.0-flash-exp",
+                        contents=prompt
+                    )
+                    answer = response.text
+                else:
+                    answer = f"根据知识库中的 {len(relevant_entries)} 条相关信息：\n\n{context}\n\n（未配置 LLM，无法生成智能答案）"
+            except Exception as e:
+                answer = f"根据知识库中的 {len(relevant_entries)} 条相关信息：\n\n{context}\n\n（LLM 调用失败: {str(e)}）"
         
         return {
             "answer": answer,

@@ -138,8 +138,7 @@ async def windows_hotkey(keys: str) -> Dict[str, Any]:
 # ============================================================================
 
 async def android_click(device_id: str, x: int, y: int) -> Dict[str, Any]:
-    """Android 点击"""
-    # TODO: 调用 Android Agent 或 ADB
+    """Android 点击（通过 Node_33 ADB）"""
     result = await call_node(NODE_33_ADB_URL, "/tap", {
         "device_id": device_id,
         "x": x,
@@ -148,8 +147,7 @@ async def android_click(device_id: str, x: int, y: int) -> Dict[str, Any]:
     return result
 
 async def android_input(device_id: str, text: str) -> Dict[str, Any]:
-    """Android 输入"""
-    # TODO: 调用 Android Agent 或 ADB
+    """Android 输入（通过 Node_33 ADB）"""
     result = await call_node(NODE_33_ADB_URL, "/input_text", {
         "device_id": device_id,
         "text": text
@@ -157,8 +155,7 @@ async def android_input(device_id: str, text: str) -> Dict[str, Any]:
     return result
 
 async def android_scroll(device_id: str, direction: str) -> Dict[str, Any]:
-    """Android 滚动"""
-    # TODO: 调用 Android Agent 或 ADB
+    """Android 滚动（通过 Node_33 ADB）"""
     result = await call_node(NODE_33_ADB_URL, "/swipe", {
         "device_id": device_id,
         "direction": direction
@@ -166,8 +163,7 @@ async def android_scroll(device_id: str, direction: str) -> Dict[str, Any]:
     return result
 
 async def android_press_key(device_id: str, key: str) -> Dict[str, Any]:
-    """Android 按键"""
-    # TODO: 调用 Android Agent 或 ADB
+    """Android 按键（通过 Node_33 ADB）"""
     result = await call_node(NODE_33_ADB_URL, "/press_key", {
         "device_id": device_id,
         "key": key
