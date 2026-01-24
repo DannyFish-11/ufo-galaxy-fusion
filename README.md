@@ -1,7 +1,7 @@
 # UFO³ Galaxy - 分布式 AI 代理系统 🛸
 
-**版本**: v4.0 (2026-01-21)  
-**总节点数**: 79 个
+**版本**: v4.2 (2026-01-24)  
+**总节点数**: 96 个（93 个基础节点 + 3 个增强节点）
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)

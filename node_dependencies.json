@@ -947,6 +947,45 @@
       ],
       "optional_dependencies": [],
       "description": "Auto-generated config for Node_106_GitHubFlow"
+    },
+    "Node_110_SmartOrchestrator": {
+      "port": 8110,
+      "group": "core",
+      "priority": 2,
+      "dependencies": [
+        "Node_01_OneAPI",
+        "Node_02_Tasker",
+        "Node_67_HealthMonitor",
+        "Node_103_KnowledgeGraph"
+      ],
+      "optional_dependencies": [],
+      "description": "智能任务编排引擎 - 动态任务分解、并行执行、自适应优化"
+    },
+    "Node_111_ContextManager": {
+      "port": 8111,
+      "group": "core",
+      "priority": 2,
+      "dependencies": [
+        "Node_13_SQLite",
+        "Node_20_Qdrant",
+        "Node_73_Learning",
+        "Node_100_MemorySystem"
+      ],
+      "optional_dependencies": [],
+      "description": "上下文管理引擎 - 跨会话持久化、用户画像、智能检索"
+    },
+    "Node_112_SelfHealing": {
+      "port": 8112,
+      "group": "core",
+      "priority": 2,
+      "dependencies": [
+        "Node_02_Tasker",
+        "Node_65_LoggerCentral",
+        "Node_67_HealthMonitor",
+        "Node_73_Learning"
+      ],
+      "optional_dependencies": [],
+      "description": "节点自愈引擎 - 异常检测、自动诊断、自动修复、故障预测"
     }
   }
 }
