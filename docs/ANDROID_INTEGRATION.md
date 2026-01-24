@@ -1,395 +1,122 @@
-# Android Agent 集成文档
+# UFO³ Galaxy - Android 客户端集成文档
 
-## 概述
+**文档版本:** 2.0  
+**更新日期:** 2026-01-24  
+**状态:** 核心功能已完成，与 Windows 客户端功能对等
 
-本文档描述了如何将 UFO³ Galaxy Android Agent 集成到主系统中，实现跨设备协同。
+---
 
-## Android Agent 仓库
+## 1. 概述
 
-**GitHub**: https://github.com/DannyFish-11/ufo-galaxy-android
+本文档描述了如何将 UFO³ Galaxy Android 客户端集成到主系统中。Android 客户端现已完成核心功能开发，实现了与 Windows 客户端的功能对等，并在语音输入、WebRTC 屏幕共享等方面具备独特优势。
 
-## 已实现功能
+**Android 客户端仓库:** [https://github.com/DannyFish-11/ufo-galaxy-android](https://github.com/DannyFish-11/ufo-galaxy-android)
 
-### 1. 通信层 (892 行代码)
+---
 
-- ✅ **WebSocketClient.kt** (290 行) - WebSocket 客户端
-  - 连接到 Galaxy Gateway
-  - 自动重连机制（最多 10 次）
-  - 心跳保持（每 30 秒）
-  - 连接状态管理
+## 2. 功能与代码统计
 
-- ✅ **AIPMessage.kt** (309 行) - AIP v2.0 协议封装
-  - 支持 10 种消息类型
-  - 消息验证和解析
-  - JSON 序列化和反序列化
+Android 客户端总代码量 **2,934 行**，所有功能均已达到生产就绪状态，无占位符代码。
 
-- ✅ **DeviceManager.kt** (293 行) - 设备管理器
-  - 设备注册
-  - 心跳机制
-  - 任务接收和执行
-  - 工具注册
+| 模块 | 代码行数 | 状态 | 核心组件 |
+| :--- | :--- | :--- | :--- |
+| **通信层** | 892 行 | ✅ 完成 | `WebSocketClient`, `AIPMessage`, `DeviceManager` |
+| **WebRTC** | 654 行 | ✅ 完成 | `WebRTCManager`, `ScreenCaptureService` |
+| **浮窗 UI** | 515 行 | ✅ 完成 | `FloatingWindowService` |
+| **无障碍服务** | 589 行 | ✅ 完成 | `UFOAccessibilityService` |
+| **XML 资源** | 284 行 | ✅ 完成 | 布局 (Layouts) 和样式 (Drawables) |
 
-### 2. UI 层
+---
 
-- ✅ **FloatingWindowService.kt** (494 行) - 浮动窗口服务
-  - 黑白渐变 UI
-  - Dynamic Island 风格
-  - 语音和文字双输入
-  - 快捷操作（截图、剪贴板、任务）
+## 3. 核心功能对比
 
-### 3. 无障碍服务
+| 功能 | Windows 客户端 | Android 客户端 | 状态与备注 |
+| :--- | :--- | :--- | :--- |
+| **设备注册与心跳** | ✅ | ✅ | **功能对等** |
+| **WebSocket & AIP v2.0** | ✅ | ✅ | **功能对等** |
+| **浮窗 UI** | ✅ (PyQt5/Tkinter) | ✅ (Android 原生) | **UI 风格一致** (黑白渐变) |
+| **文本输入** | ✅ | ✅ | **功能对等** |
+| **语音输入** | ❌ | ✅ | **Android 专属优势** (基于 `SpeechRecognizer`) |
+| **屏幕共享** | ✅ (scrcpy) | ✅ (WebRTC) | 技术方案不同，**功能对等** |
+| **系统级控制** | ✅ (pyautogui) | ✅ (Accessibility) | **功能对等** |
 
-- ✅ **UFOAccessibilityService.kt** (494 行) - 无障碍服务
-  - 10 个核心操作（点击、滑动、输入等）
-  - 与豆包手机类似的系统级控制能力
+---
 
-### 4. 屏幕截图
+## 4. 集成步骤
 
-- ✅ **ScreenshotHelper.kt** - 截图辅助类
-  - 支持 Android 11+ 的截图功能
+### 步骤 1: 启动 Galaxy Gateway
 
-## 集成步骤
-
-### 1. 启动 Galaxy Gateway
-
-确保 Galaxy Gateway 正在运行：
+确保主系统的 Galaxy Gateway 正在运行。Gateway 负责设备管理、消息路由和任务分发。
 
 ```bash
 cd /path/to/ufo-galaxy
 python galaxy_gateway/main.py
 ```
 
-Gateway 默认监听：
-- WebSocket: `ws://0.0.0.0:8000/ws`
-- HTTP API: `http://0.0.0.0:8000`
+Gateway 默认监听 `ws://0.0.0.0:8000/ws`。
 
-### 2. 配置 Android Agent
+### 步骤 2: 配置并安装 Android 客户端
 
-在 Android Agent 的 `MainActivity.kt` 中配置 Gateway URL：
+1.  **配置 Gateway 地址:** 在 Android 项目的 `DeviceManager` 或配置文件中，设置 Gateway 的 WebSocket 地址（例如: `ws://192.168.1.100:8000/ws`）。
+2.  **编译 APK:** 使用 Android Studio 编译生成 `app-debug.apk`。
+3.  **安装 APK:**
+    ```bash
+    adb install app-debug.apk
+    ```
 
-```kotlin
-val gatewayUrl = "ws://192.168.1.100:8000/ws" // 替换为实际 IP
+### 步骤 3: 启动并授权
+
+1.  在 Android 设备上打开 **UFO³ Galaxy** 应用。
+2.  根据应用引导，依次授予以下关键权限：
+    - **悬浮窗权限 (SYSTEM_ALERT_WINDOW):** 用于显示系统级浮窗 UI。
+    - **无障碍服务权限 (Accessibility Service):** 用于实现系统级控制和自动化操作。
+    - **录音权限 (RECORD_AUDIO):** 用于支持语音输入功能。
+3.  启动 `FloatingWindowService`，浮窗将显示在屏幕上。
+
+### 步骤 4: 验证连接
+
+- **客户端:** 浮窗 UI 上的状态指示灯应变为绿色，表示已成功连接到 Gateway。
+- **Gateway 端:** 在 Gateway 的控制台日志中，应能看到来自 Android 设备的注册信息。
+
+```log
+[INFO] Device registered: android_xxxxxxxx
+[INFO]   - Device Type: android
+[INFO]   - Capabilities: screen_capture_webrtc, voice_input, accessibility_control
 ```
 
-### 3. 安装 Android APK
+---
 
-```bash
-adb install app-debug.apk
-```
+## 5. 协同工作示例
 
-### 4. 启动 Android Agent
+### 示例 1: 从 Windows 控制 Android 进行 WebRTC 屏幕共享
 
-1. 打开 UFO Galaxy 应用
-2. 授予必要权限：
-   - 悬浮窗权限
-   - 无障碍服务权限
-   - 录音权限（语音输入）
-3. 点击"启动浮动窗口"按钮
-4. 点击"连接到 Galaxy"按钮
+1.  **Windows 客户端** (或任何其他控制端) 通过 Gateway 的 HTTP API 发送一个任务。
+2.  **Galaxy Gateway** 将任务路由到指定的 Android 设备。
+3.  **Android 客户端** 的 `WebRTCManager` 收到任务，初始化 `PeerConnection`，创建并发送 Offer。
+4.  信令通过 Gateway 中继到 **Windows 客户端**。
+5.  双方交换 ICE Candidate，建立 WebRTC 连接，实现低延迟屏幕共享。
 
-### 5. 验证连接
+### 示例 2: 语音指令驱动的多设备任务
 
-在 Galaxy Gateway 的日志中应该看到：
+1.  **用户** 对 **Android 客户端** 的浮窗使用语音输入：“总结我电脑上打开的报告，并发送邮件给张三。”
+2.  **Android 客户端** 的 `FloatingWindowService` 将语音转为文本，并通过 WebSocket 发送到 **Galaxy Gateway**。
+3.  **Gateway** 解析任务，进行任务分解：
+    - **步骤 A:** 指派 **Windows 客户端** 执行“获取活动窗口内容”和“文本摘要”任务。
+    - **步骤 B:** 指派 **Android 客户端** 执行“发送邮件”任务，并将步骤 A 的结果作为邮件内容。
+4.  两个客户端分别执行任务，并将结果报告给 Gateway。
 
-```
-[INFO] Device registered: android_<device_id>
-[INFO] Device type: android
-[INFO] Capabilities: screen_capture, input_control, accessibility, voice_input
-```
+---
 
-## 通信协议
+## 6. 故障排除
 
-### 设备注册消息
+- **连接失败:** 检查 Android 设备与 Gateway 是否在同一局域网，并确认 IP 地址和端口配置正确。
+- **权限问题:** 如果浮窗不显示或无障碍操作失败，请到系统“设置”中手动检查相关权限是否已授予。
+- **WebRTC 失败:** 检查 STUN/TURN 服务器配置是否正确，以及网络防火墙是否阻止了 UDP 流量。
 
-Android Agent 连接后会自动发送：
+---
 
-```json
-{
-  "version": "2.0",
-  "type": "device_register",
-  "device_id": "android_<device_id>",
-  "timestamp": 1706112000000,
-  "payload": {
-    "device_type": "android",
-    "capabilities": {
-      "screen_capture": true,
-      "input_control": true,
-      "accessibility": true,
-      "voice_input": true,
-      "app_management": true
-    }
-  }
-}
-```
+## 7. 相关文档
 
-### 任务请求消息
-
-Galaxy Gateway 可以发送任务请求：
-
-```json
-{
-  "version": "2.0",
-  "type": "task_request",
-  "device_id": "android_<device_id>",
-  "timestamp": 1706112000000,
-  "payload": {
-    "task_id": "task_001",
-    "task_type": "screenshot",
-    "data": {
-      "save_path": "/sdcard/screenshot.png"
-    }
-  }
-}
-```
-
-### 任务响应消息
-
-Android Agent 会返回：
-
-```json
-{
-  "version": "2.0",
-  "type": "task_response",
-  "device_id": "android_<device_id>",
-  "timestamp": 1706112000000,
-  "payload": {
-    "task_id": "task_001",
-    "success": true,
-    "result": {
-      "file_path": "/sdcard/screenshot.png",
-      "file_size": 1024000
-    }
-  }
-}
-```
-
-## 跨设备协同示例
-
-### 示例 1：跨设备截图
-
-**场景**：从 Windows 端触发 Android 端截图
-
-**步骤**：
-
-1. Windows 端发送任务请求到 Galaxy Gateway：
-```python
-import requests
-
-response = requests.post(
-    "http://192.168.1.100:8000/api/task",
-    json={
-        "target_device": "android_<device_id>",
-        "task_type": "screenshot",
-        "data": {}
-    }
-)
-```
-
-2. Galaxy Gateway 路由任务到 Android Agent
-
-3. Android Agent 执行截图并返回结果
-
-4. Galaxy Gateway 将结果返回给 Windows 端
-
-### 示例 2：跨设备输入
-
-**场景**：从 Windows 端控制 Android 端输入文本
-
-**步骤**：
-
-1. Windows 端发送命令：
-```python
-response = requests.post(
-    "http://192.168.1.100:8000/api/command",
-    json={
-        "target_device": "android_<device_id>",
-        "command_type": "input_text",
-        "data": {
-            "text": "Hello from Windows!"
-        }
-    }
-)
-```
-
-2. Android Agent 通过无障碍服务输入文本
-
-3. 返回执行结果
-
-### 示例 3：跨设备任务编排
-
-**场景**：在 Windows 上编辑文档，在 Android 上发送邮件
-
-**步骤**：
-
-1. Galaxy Gateway 接收任务：
-```json
-{
-  "task_name": "edit_and_send",
-  "steps": [
-    {
-      "device": "windows_<device_id>",
-      "action": "edit_document",
-      "data": {"file": "report.docx"}
-    },
-    {
-      "device": "android_<device_id>",
-      "action": "send_email",
-      "data": {
-        "to": "boss@company.com",
-        "subject": "Report",
-        "attachment": "report.docx"
-      }
-    }
-  ]
-}
-```
-
-2. Galaxy Gateway 按顺序执行任务
-
-3. 返回整体执行结果
-
-## 支持的操作
-
-### 1. 屏幕操作
-
-- `screenshot` - 截图
-- `screen_record` - 录屏（需要实现）
-
-### 2. 输入操作
-
-- `tap` - 点击
-- `long_tap` - 长按
-- `swipe` - 滑动
-- `input_text` - 输入文本
-- `key_event` - 按键事件
-
-### 3. 应用操作
-
-- `launch_app` - 启动应用
-- `close_app` - 关闭应用
-- `install_app` - 安装应用
-- `uninstall_app` - 卸载应用
-
-### 4. 系统操作
-
-- `get_device_info` - 获取设备信息
-- `get_running_apps` - 获取运行中的应用
-- `get_clipboard` - 获取剪贴板内容
-- `set_clipboard` - 设置剪贴板内容
-
-## 性能优化
-
-### 1. 连接优化
-
-- 使用 WSS (WebSocket Secure) 加密通信
-- 启用消息压缩（gzip）
-- 使用连接池复用
-
-### 2. 消息优化
-
-- 批量发送消息
-- 使用二进制格式传输大文件
-- 启用断点续传
-
-### 3. 心跳优化
-
-根据网络环境调整心跳间隔：
-- 稳定网络：60 秒
-- 不稳定网络：30 秒
-- 移动网络：20 秒
-
-## 故障排除
-
-### 1. 连接失败
-
-**问题**：Android Agent 无法连接到 Galaxy Gateway
-
-**解决方案**：
-- 检查 Gateway URL 是否正确
-- 检查网络连接（同一局域网）
-- 检查防火墙设置
-- 检查 Gateway 是否正在运行
-
-### 2. 消息未接收
-
-**问题**：发送消息后没有收到响应
-
-**解决方案**：
-- 检查设备是否已注册
-- 检查消息格式是否正确
-- 检查 Gateway 日志
-
-### 3. 权限问题
-
-**问题**：无障碍服务或悬浮窗权限未授予
-
-**解决方案**：
-- 在设置中手动授予权限
-- 重启应用
-
-## 安全性
-
-### 1. 使用 WSS
-
-```kotlin
-val gatewayUrl = "wss://your-domain.com/ws"
-```
-
-### 2. 设备认证
-
-在设备注册时添加认证信息：
-
-```kotlin
-val message = AIPMessage.createDeviceRegister(
-    deviceId = deviceId,
-    deviceType = "android",
-    capabilities = mapOf(
-        "auth_token" to "your_auth_token"
-    )
-)
-```
-
-### 3. 消息加密
-
-对敏感数据进行加密：
-
-```kotlin
-val encryptedData = encrypt(sensitiveData)
-val message = AIPMessage.createDataTransfer(
-    deviceId = deviceId,
-    dataType = "encrypted",
-    data = encryptedData
-)
-```
-
-## 未来增强
-
-1. **WebRTC 集成** - 低延迟屏幕共享
-2. **P2P 连接** - 设备间直连
-3. **离线队列** - 离线时缓存消息
-4. **多媒体传输** - 图片、视频、音频传输
-5. **断点续传** - 大文件传输
-
-## 相关文档
-
-- [Android 通信层文档](https://github.com/DannyFish-11/ufo-galaxy-android/blob/main/COMMUNICATION_LAYER.md)
-- [Android 浮动窗口文档](https://github.com/DannyFish-11/ufo-galaxy-android/blob/main/FLOATING_WINDOW_DEVELOPMENT.md)
-- [Android 无障碍服务文档](https://github.com/DannyFish-11/ufo-galaxy-android/blob/main/ACCESSIBILITY_SERVICE_VERIFICATION.md)
-- [Galaxy Gateway 文档](../galaxy_gateway/README.md)
-- [AIP v2.0 协议文档](../galaxy_gateway/aip_protocol_v2.py)
-
-## 版本历史
-
-- **v2.0.0** (2026-01-24)
-  - 完整实现通信层
-  - 完整实现 UI 层
-  - 完整实现无障碍服务
-  - 支持跨设备协同
-
-## 贡献者
-
-- UFO Galaxy Team
-
-## 许可证
-
-MIT License
+- **Android 客户端进度报告:** [PROGRESS_REPORT.md](https://github.com/DannyFish-11/ufo-galaxy-android/blob/main/PROGRESS_REPORT.md)
+- **Android 集成测试方案:** [INTEGRATION_TEST_PLAN.md](https://github.com/DannyFish-11/ufo-galaxy-android/blob/main/INTEGRATION_TEST_PLAN.md)
+- **AIP v2.0 协议:** `ufo-galaxy/galaxy_gateway/aip_protocol_v2.py`
