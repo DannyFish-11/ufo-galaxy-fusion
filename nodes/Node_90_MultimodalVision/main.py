@@ -43,6 +43,7 @@ app.add_middleware(
 # 节点地址
 NODE_15_OCR_URL = os.getenv("NODE_15_OCR_URL", "http://localhost:8015")
 NODE_45_DESKTOP_URL = os.getenv("NODE_45_DESKTOP_URL", "http://localhost:8045")
+NODE_95_WEBRTC_URL = os.getenv("NODE_95_WEBRTC_URL", "http://localhost:8095")
 
 # 多模态 LLM
 llm_client = None
@@ -101,6 +102,8 @@ class AnalyzeScreenRequest(BaseModel):
     image_path: Optional[str] = None
     image_base64: Optional[str] = None
     provider: str = "auto"  # auto, gemini, qwen
+    platform: str = "windows"  # windows, android
+    device_id: Optional[str] = None  # 设备 ID（Android 必须）
 
 class FindTextRequest(BaseModel):
     """查找文本"""
@@ -159,8 +162,34 @@ async def capture_screen(request: CaptureScreenRequest) -> Dict[str, Any]:
         result = await call_node(NODE_45_DESKTOP_URL, "/screenshot", {})
         return result
     elif request.platform == "android":
-        # TODO: 调用 Android Agent
-        return {"success": False, "error": "Android screenshot not implemented yet"}
+        # 调用 Node_95 获取 Android 画面
+        if not request.device_id:
+            return {"success": False, "error": "device_id is required for Android"}
+        
+        try:
+            result = await call_node(
+                NODE_95_WEBRTC_URL,
+                "/get_latest_frame",
+                {
+                    "device_id": request.device_id,
+                    "format": "jpeg"
+                }
+            )
+            
+            if result.get("success"):
+                # 返回画面
+                return {
+                    "success": True,
+                    "image_base64": result.get("frame_data"),
+                    "timestamp": result.get("timestamp"),
+                    "frame_size": result.get("frame_size"),
+                    "source": "webrtc"
+                }
+            else:
+                return {"success": False, "error": result.get("error", "Unknown error")}
+        
+        except Exception as e:
+            return {"success": False, "error": f"Failed to get Android frame: {str(e)}"}
     else:
         return {"success": False, "error": f"Unsupported platform: {request.platform}"}
 
@@ -191,10 +220,21 @@ async def find_element(request: FindElementRequest) -> Dict[str, Any]:
     # 加载图片
     if not request.image_path and not request.image_base64:
         # 截取屏幕
-        screenshot_result = await capture_screen(CaptureScreenRequest(platform="windows"))
+        platform = request.platform if hasattr(request, 'platform') else "windows"
+        device_id = request.device_id if hasattr(request, 'device_id') else None
+        
+        screenshot_result = await capture_screen(
+            CaptureScreenRequest(
+                platform=platform,
+                device_id=device_id
+            )
+        )
+        
         if not screenshot_result.get("success"):
             return screenshot_result
-        request.image_base64 = screenshot_result["image"]
+        
+        # 根据返回的字段名获取图片
+        request.image_base64 = screenshot_result.get("image_base64") or screenshot_result.get("image")
     
     # 选择方法
     if request.method == "ocr" or (request.method == "auto" and len(request.description) < 20):
@@ -326,10 +366,21 @@ async def analyze_screen(request: AnalyzeScreenRequest) -> Dict[str, Any]:
     # 加载图片
     if not request.image_path and not request.image_base64:
         # 截取屏幕
-        screenshot_result = await capture_screen(CaptureScreenRequest(platform="windows"))
+        platform = request.platform if hasattr(request, 'platform') else "windows"
+        device_id = request.device_id if hasattr(request, 'device_id') else None
+        
+        screenshot_result = await capture_screen(
+            CaptureScreenRequest(
+                platform=platform,
+                device_id=device_id
+            )
+        )
+        
         if not screenshot_result.get("success"):
             return screenshot_result
-        request.image_base64 = screenshot_result["image"]
+        
+        # 根据返回的字段名获取图片
+        request.image_base64 = screenshot_result.get("image_base64") or screenshot_result.get("image")
     
     try:
         if provider == "qwen":
