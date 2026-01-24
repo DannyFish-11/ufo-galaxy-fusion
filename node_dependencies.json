@@ -986,6 +986,15 @@
       ],
       "optional_dependencies": [],
       "description": "节点自愈引擎 - 异常检测、自动诊断、自动修复、故障预测"
+    },
+    "Node_113_AndroidVLM": {
+      "port": 8113,
+      "dependencies": [
+        "Node_90_MultimodalVision"
+      ],
+      "priority": 40,
+      "group": "enhancement",
+      "description": "Android GUI 理解引擎（VLM + 无障碍服务）"
     }
   }
 }
