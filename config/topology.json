@@ -55,8 +55,10 @@
         "radius": 1.0
       },
       "capabilities": [
+        "coordination",
+        "lock_management",
         "state_management",
-        "lock_management"
+        "system_management"
       ],
       "api_url": "http://localhost:8000",
       "neighbors": [],
@@ -76,7 +78,8 @@
         "radius": 1.0
       },
       "capabilities": [
-        "general"
+        "general",
+        "system_management"
       ],
       "api_url": "http://localhost:8001",
       "neighbors": [
@@ -99,7 +102,13 @@
         "radius": 1.0
       },
       "capabilities": [
-        "general"
+        "coordination",
+        "decision",
+        "general",
+        "orchestration",
+        "routing",
+        "system_management",
+        "task_management"
       ],
       "api_url": "http://localhost:8002",
       "neighbors": [
@@ -121,7 +130,8 @@
         "radius": 1.0
       },
       "capabilities": [
-        "general"
+        "general",
+        "system_management"
       ],
       "api_url": "http://localhost:8003",
       "neighbors": [
@@ -143,8 +153,12 @@
         "radius": 1.0
       },
       "capabilities": [
+        "coordination",
+        "decision",
+        "orchestration",
         "routing",
-        "orchestration"
+        "system_management",
+        "task_management"
       ],
       "api_url": "http://localhost:8004",
       "neighbors": [
@@ -167,7 +181,8 @@
       },
       "capabilities": [
         "authentication",
-        "security"
+        "security",
+        "system_management"
       ],
       "api_url": "http://localhost:8005",
       "neighbors": [
@@ -189,7 +204,8 @@
         "radius": 1.0
       },
       "capabilities": [
-        "general"
+        "general",
+        "system_management"
       ],
       "api_url": "http://localhost:8006",
       "neighbors": [
@@ -212,7 +228,8 @@
         "radius": 1.0
       },
       "capabilities": [
-        "general"
+        "general",
+        "system_management"
       ],
       "api_url": "http://localhost:8007",
       "neighbors": [
@@ -235,8 +252,9 @@
         "radius": 1.0
       },
       "capabilities": [
+        "http",
         "network",
-        "http"
+        "system_management"
       ],
       "api_url": "http://localhost:8008",
       "neighbors": [],
@@ -256,7 +274,8 @@
         "radius": 1.0
       },
       "capabilities": [
-        "general"
+        "general",
+        "system_management"
       ],
       "api_url": "http://localhost:8009",
       "neighbors": [],
@@ -276,7 +295,8 @@
         "radius": 1.0
       },
       "capabilities": [
-        "general"
+        "general",
+        "system_management"
       ],
       "api_url": "http://localhost:8010",
       "neighbors": [],
@@ -296,7 +316,8 @@
         "radius": 1.0
       },
       "capabilities": [
-        "general"
+        "general",
+        "system_management"
       ],
       "api_url": "http://localhost:8011",
       "neighbors": [
@@ -319,7 +340,8 @@
         "radius": 1.0
       },
       "capabilities": [
-        "general"
+        "general",
+        "system_management"
       ],
       "api_url": "http://localhost:8012",
       "neighbors": [
@@ -342,7 +364,8 @@
         "radius": 1.0
       },
       "capabilities": [
-        "general"
+        "general",
+        "system_management"
       ],
       "api_url": "http://localhost:8013",
       "neighbors": [
@@ -365,7 +388,8 @@
         "radius": 1.0
       },
       "capabilities": [
-        "general"
+        "general",
+        "system_management"
       ],
       "api_url": "http://localhost:8014",
       "neighbors": [],
@@ -385,8 +409,10 @@
         "radius": 1.0
       },
       "capabilities": [
-        "vision",
-        "image_processing"
+        "image_processing",
+        "ocr",
+        "system_management",
+        "vision"
       ],
       "api_url": "http://localhost:8015",
       "neighbors": [],
@@ -406,7 +432,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8016",
       "neighbors": [
@@ -429,7 +457,11 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "nlu",
+        "processing",
+        "text_processing"
       ],
       "api_url": "http://localhost:8017",
       "neighbors": [
@@ -452,7 +484,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8018",
       "neighbors": [
@@ -478,7 +512,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8019",
       "neighbors": [
@@ -501,7 +537,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8020",
       "neighbors": [
@@ -524,7 +562,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8021",
       "neighbors": [
@@ -550,8 +590,10 @@
         "radius": 2.0
       },
       "capabilities": [
-        "search",
-        "information_retrieval"
+        "analysis",
+        "information_retrieval",
+        "processing",
+        "search"
       ],
       "api_url": "http://localhost:8022",
       "neighbors": [
@@ -575,7 +617,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8023",
       "neighbors": [
@@ -601,7 +645,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8023",
       "neighbors": [
@@ -627,7 +673,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8024",
       "neighbors": [
@@ -653,8 +701,10 @@
         "radius": 2.0
       },
       "capabilities": [
-        "search",
-        "information_retrieval"
+        "analysis",
+        "information_retrieval",
+        "processing",
+        "search"
       ],
       "api_url": "http://localhost:8025",
       "neighbors": [
@@ -678,7 +728,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8028",
       "neighbors": [
@@ -704,7 +756,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8029",
       "neighbors": [
@@ -730,7 +784,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8030",
       "neighbors": [
@@ -756,7 +812,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8031",
       "neighbors": [
@@ -782,7 +840,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8032",
       "neighbors": [
@@ -808,7 +868,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8033",
       "neighbors": [
@@ -834,7 +896,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8034",
       "neighbors": [
@@ -860,7 +924,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8035",
       "neighbors": [
@@ -886,7 +952,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8036",
       "neighbors": [
@@ -912,7 +980,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8037",
       "neighbors": [
@@ -938,7 +1008,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8038",
       "neighbors": [
@@ -964,7 +1036,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8039",
       "neighbors": [
@@ -989,7 +1063,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8040",
       "neighbors": [
@@ -1014,7 +1090,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8041",
       "neighbors": [
@@ -1039,7 +1117,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8042",
       "neighbors": [
@@ -1065,7 +1145,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8043",
       "neighbors": [
@@ -1091,7 +1173,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8044",
       "neighbors": [
@@ -1117,7 +1201,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8045",
       "neighbors": [
@@ -1143,8 +1229,10 @@
         "radius": 2.0
       },
       "capabilities": [
-        "vision",
-        "image_processing"
+        "analysis",
+        "image_processing",
+        "processing",
+        "vision"
       ],
       "api_url": "http://localhost:8046",
       "neighbors": [
@@ -1167,7 +1255,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "media_processing"
+        "analysis",
+        "media_processing",
+        "processing"
       ],
       "api_url": "http://localhost:8047",
       "neighbors": [
@@ -1191,7 +1281,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "media_processing"
+        "analysis",
+        "media_processing",
+        "processing"
       ],
       "api_url": "http://localhost:8048",
       "neighbors": [
@@ -1215,7 +1307,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8048",
       "neighbors": [
@@ -1241,7 +1335,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8049",
       "neighbors": [
@@ -1267,7 +1363,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8050",
       "neighbors": [
@@ -1293,7 +1391,12 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "orchestration",
+        "processing",
+        "routing",
+        "task_management"
       ],
       "api_url": "http://localhost:8051",
       "neighbors": [
@@ -1317,7 +1420,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8052",
       "neighbors": [
@@ -1343,7 +1448,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8053",
       "neighbors": [
@@ -1369,7 +1476,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8054",
       "neighbors": [
@@ -1395,7 +1504,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8056",
       "neighbors": [
@@ -1421,7 +1532,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8056",
       "neighbors": [
@@ -1447,7 +1560,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8057",
       "neighbors": [
@@ -1473,8 +1588,11 @@
         "radius": 2.0
       },
       "capabilities": [
+        "analysis",
+        "orchestration",
+        "processing",
         "routing",
-        "orchestration"
+        "task_management"
       ],
       "api_url": "http://localhost:8058",
       "neighbors": [
@@ -1498,7 +1616,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8059",
       "neighbors": [
@@ -1524,7 +1644,9 @@
         "radius": 2.0
       },
       "capabilities": [
-        "general"
+        "analysis",
+        "general",
+        "processing"
       ],
       "api_url": "http://localhost:8061",
       "neighbors": [
@@ -1550,6 +1672,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8062",
@@ -1576,6 +1699,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8064",
@@ -1601,6 +1725,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8065",
@@ -1626,7 +1751,10 @@
         "radius": 3.0
       },
       "capabilities": [
-        "general"
+        "data_collection",
+        "general",
+        "lock_management",
+        "state_management"
       ],
       "api_url": "http://localhost:8066",
       "neighbors": [
@@ -1650,6 +1778,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8067",
@@ -1676,6 +1805,7 @@
       },
       "capabilities": [
         "authentication",
+        "data_collection",
         "security"
       ],
       "api_url": "http://localhost:8068",
@@ -1699,6 +1829,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8069",
@@ -1722,6 +1853,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8070",
@@ -1748,6 +1880,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "media_processing"
       ],
       "api_url": "http://localhost:8071",
@@ -1771,6 +1904,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "knowledge_management",
         "memory"
       ],
@@ -1798,6 +1932,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8073",
@@ -1824,6 +1959,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8074",
@@ -1850,6 +1986,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "nlu",
         "text_processing"
       ],
@@ -1874,6 +2011,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "knowledge_management",
         "memory"
       ],
@@ -1901,8 +2039,10 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
+        "orchestration",
         "routing",
-        "orchestration"
+        "task_management"
       ],
       "api_url": "http://localhost:8081",
       "neighbors": [
@@ -1927,8 +2067,9 @@
         "radius": 3.0
       },
       "capabilities": [
-        "network",
-        "http"
+        "data_collection",
+        "http",
+        "network"
       ],
       "api_url": "http://localhost:8082",
       "neighbors": [
@@ -1951,6 +2092,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8083",
@@ -1977,6 +2119,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8084",
@@ -2003,6 +2146,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8085",
@@ -2029,8 +2173,9 @@
         "radius": 3.0
       },
       "capabilities": [
-        "vision",
-        "image_processing"
+        "data_collection",
+        "image_processing",
+        "vision"
       ],
       "api_url": "http://localhost:8090",
       "neighbors": [
@@ -2054,6 +2199,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8091",
@@ -2080,6 +2226,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8092",
@@ -2106,6 +2253,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8095",
@@ -2132,8 +2280,10 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
+        "orchestration",
         "routing",
-        "orchestration"
+        "task_management"
       ],
       "api_url": "http://localhost:8096",
       "neighbors": [
@@ -2158,8 +2308,9 @@
         "radius": 3.0
       },
       "capabilities": [
-        "search",
-        "information_retrieval"
+        "data_collection",
+        "information_retrieval",
+        "search"
       ],
       "api_url": "http://localhost:8097",
       "neighbors": [
@@ -2182,6 +2333,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "knowledge_management",
         "memory"
       ],
@@ -2209,6 +2361,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8101",
@@ -2235,6 +2388,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8102",
@@ -2261,6 +2415,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "knowledge_management",
         "memory"
       ],
@@ -2288,6 +2443,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8104",
@@ -2314,6 +2470,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "knowledge_management",
         "memory"
       ],
@@ -2341,6 +2498,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8106",
@@ -2367,6 +2525,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8108",
@@ -2393,6 +2552,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8109",
@@ -2419,8 +2579,10 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
+        "orchestration",
         "routing",
-        "orchestration"
+        "task_management"
       ],
       "api_url": "http://localhost:8110",
       "neighbors": [
@@ -2445,7 +2607,10 @@
         "radius": 3.0
       },
       "capabilities": [
-        "general"
+        "data_collection",
+        "general",
+        "lock_management",
+        "state_management"
       ],
       "api_url": "http://localhost:8111",
       "neighbors": [
@@ -2469,6 +2634,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8112",
@@ -2495,7 +2661,10 @@
         "radius": 3.0
       },
       "capabilities": [
-        "general"
+        "data_collection",
+        "general",
+        "image_processing",
+        "vision"
       ],
       "api_url": "http://localhost:8113",
       "neighbors": [
@@ -2519,6 +2688,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8116",
@@ -2545,6 +2715,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8117",
@@ -2571,6 +2742,7 @@
         "radius": 3.0
       },
       "capabilities": [
+        "data_collection",
         "general"
       ],
       "api_url": "http://localhost:8118",
