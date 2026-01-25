@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 """
-UFO Galaxy Fusion - Node Executor (Reinforced)
+UFO Galaxy Fusion - Node Executor (Gateway Optimized)
 
-节点执行器（加固版）
+节点执行器（网关优化版）
 
 核心职责:
-1. 管理与 102 个节点的连接
-2. 执行远程命令
-3. 统一端口管理 (9000+ 范围)
-4. 异常处理和重试
+1. 通过统一网关 (Unified Gateway) 与 102 个节点通信
+2. 简化连接管理，不再需要维护 102 个端口
+3. 提供统一的异常处理和结果封装
 
 作者: Manus AI
 日期: 2026-01-26
-版本: 1.1.0 (加固版)
+版本: 1.2.0 (网关优化版)
 """
 
 import asyncio
@@ -36,32 +35,32 @@ class ExecutionResult:
     latency_ms: float = 0.0
     timestamp: float = 0.0
 
-class NodeExecutor:
+class ExecutionPool:
     """
-    单个节点的执行器
+    执行池 - 优化为通过统一网关进行通信
     """
     
-    def __init__(self, node_id: str, api_url: str, timeout: int = 15):
-        self.node_id = node_id
-        self.api_url = api_url.rstrip('/')
-        self.timeout = timeout
+    def __init__(self, gateway_url: str = "http://localhost:8000"):
+        self.gateway_url = gateway_url.rstrip('/')
         self.session: Optional[aiohttp.ClientSession] = None
-        
+        logger.info(f"🎯 ExecutionPool initialized using gateway: {self.gateway_url}")
+
     async def _get_session(self) -> aiohttp.ClientSession:
         if self.session is None or self.session.closed:
             self.session = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=self.timeout)
+                timeout=aiohttp.ClientTimeout(total=30) # 网关模式建议超时设置长一点
             )
         return self.session
 
-    async def execute(self, command: str, params: Optional[Dict[str, Any]] = None) -> ExecutionResult:
-        """执行远程命令"""
+    async def execute_on_node(self, node_id: str, command: str, params: Optional[Dict[str, Any]] = None) -> ExecutionResult:
+        """通过网关在指定节点上执行命令"""
         start_time = time.time()
-        url = f"{self.api_url}/execute"
+        # 统一网关路由格式
+        url = f"{self.gateway_url}/api/nodes/{node_id}/execute"
+        
         payload = {
             "command": command,
-            "params": params or {},
-            "timestamp": start_time
+            "params": params or {}
         }
         
         try:
@@ -69,80 +68,36 @@ class NodeExecutor:
             async with session.post(url, json=payload) as response:
                 latency = (time.time() - start_time) * 1000
                 if response.status == 200:
-                    data = await response.json()
+                    res_json = await response.json()
                     return ExecutionResult(
-                        node_id=self.node_id,
-                        success=True,
-                        data=data,
+                        node_id=node_id,
+                        success=res_json.get("success", True),
+                        data=res_json.get("data"),
+                        error=res_json.get("error"),
                         latency_ms=latency,
                         timestamp=time.time()
                     )
                 else:
                     error_text = await response.text()
                     return ExecutionResult(
-                        node_id=self.node_id,
+                        node_id=node_id,
                         success=False,
-                        error=f"HTTP {response.status}: {error_text}",
+                        error=f"Gateway Error {response.status}: {error_text}",
                         latency_ms=latency,
                         timestamp=time.time()
                     )
         except Exception as e:
             latency = (time.time() - start_time) * 1000
             return ExecutionResult(
-                node_id=self.node_id,
+                node_id=node_id,
                 success=False,
-                error=str(e),
+                error=f"Connection Error: {str(e)}",
                 latency_ms=latency,
                 timestamp=time.time()
             )
 
-    async def close(self):
-        """关闭连接"""
+    async def close_all(self):
+        """关闭网关连接会话"""
         if self.session and not self.session.closed:
             await self.session.close()
-
-class ExecutionPool:
-    """
-    执行池 - 管理 102 个节点的执行器
-    """
-    
-    def __init__(self, topology_config: List[Dict[str, Any]]):
-        self.executors: Dict[str, NodeExecutor] = {}
-        self._init_pool(topology_config)
-        
-    def _init_pool(self, topology_config: List[Dict[str, Any]]):
-        """初始化执行池，统一使用 9000+ 端口范围"""
-        for node in topology_config:
-            node_id = node["id"]
-            # 统一端口逻辑：9000 + 节点索引
-            # 假设节点 ID 格式为 Node_XX
-            try:
-                idx = int(node_id.split('_')[1])
-                port = 9000 + idx
-                api_url = f"http://localhost:{port}"
-            except:
-                api_url = node.get("api_url", "http://localhost:8000")
-                
-            self.executors[node_id] = NodeExecutor(node_id, api_url)
-        
-        logger.info(f"🎯 ExecutionPool initialized with {len(self.executors)} executors")
-
-    async def execute_on_node(self, node_id: str, command: str, params: Optional[Dict[str, Any]] = None) -> ExecutionResult:
-        """在指定节点上执行命令"""
-        executor = self.executors.get(node_id)
-        if not executor:
-            return ExecutionResult(
-                node_id=node_id,
-                success=False,
-                error=f"Executor for {node_id} not found in pool"
-            )
-        
-        return await executor.execute(command, params)
-
-    async def close_all(self):
-        """关闭所有执行器连接"""
-        logger.info("🛑 Closing all executors in pool...")
-        tasks = [executor.close() for executor in self.executors.values()]
-        if tasks:
-            await asyncio.gather(*tasks)
-        logger.info("✅ All executors closed")
+            logger.info("✅ Gateway session closed")
