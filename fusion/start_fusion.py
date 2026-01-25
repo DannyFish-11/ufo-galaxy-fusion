@@ -27,6 +27,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from fusion.topology_manager import TopologyManager
 from fusion.unified_orchestrator import UnifiedOrchestrator, Task, TaskType, TaskPriority
+from fusion.node_executor import ExecutionPool
 
 # 配置日志
 logging.basicConfig(
@@ -57,6 +58,7 @@ class FusionSystem:
         """
         self.config_path = Path(config_path)
         self.topology_manager: TopologyManager = None
+        self.execution_pool: ExecutionPool = None
         self.orchestrator: UnifiedOrchestrator = None
         self.is_running = False
         
@@ -83,10 +85,22 @@ class FusionSystem:
         logger.info(f"   - Layers: {stats['layers']}")
         logger.info(f"   - Domains: {len(stats.get('domains', {}))}")
         
-        # 2. 初始化统一编排引擎
+        # 2. 初始化执行池
+        logger.info("🎯 Initializing ExecutionPool...")
+        import json
+        with open(topology_config, 'r') as f:
+            topology_data = json.load(f)
+        
+        self.execution_pool = ExecutionPool(topology_data)
+        await self.execution_pool.initialize_all()
+        
+        logger.info("✅ ExecutionPool initialized")
+        
+        # 3. 初始化统一编排引擎
         logger.info("🎯 Initializing UnifiedOrchestrator...")
         self.orchestrator = UnifiedOrchestrator(
             topology_manager=self.topology_manager,
+            execution_pool=self.execution_pool,
             enable_predictive_routing=True,
             enable_adaptive_balancing=True
         )
@@ -124,6 +138,9 @@ class FusionSystem:
         
         if self.orchestrator:
             await self.orchestrator.stop()
+        
+        if self.execution_pool:
+            await self.execution_pool.close_all()
         
         logger.info("✅ Fusion System stopped")
     

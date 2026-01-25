@@ -27,6 +27,7 @@ from enum import Enum
 import time
 
 from .topology_manager import TopologyManager, RoutingStrategy, NodeInfo
+from .node_executor import ExecutionPool, ExecutionResult
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +111,7 @@ class UnifiedOrchestrator:
     def __init__(
         self,
         topology_manager: TopologyManager,
+        execution_pool: ExecutionPool,
         enable_predictive_routing: bool = True,
         enable_adaptive_balancing: bool = True
     ):
@@ -122,6 +124,7 @@ class UnifiedOrchestrator:
             enable_adaptive_balancing: 启用自适应负载均衡
         """
         self.topology = topology_manager
+        self.execution_pool = execution_pool
         self.enable_predictive_routing = enable_predictive_routing
         self.enable_adaptive_balancing = enable_adaptive_balancing
         
@@ -508,23 +511,39 @@ class UnifiedOrchestrator:
         
         logger.info(f"⚡ Executing subtask on node: {node_id}")
         
-        # TODO: 实际执行逻辑
-        # 这里需要调用节点的 API 或通过 AIP 协议发送命令
-        
-        # 模拟执行
-        await asyncio.sleep(plan.estimated_latency_ms / 1000.0)
+        # 实际执行逻辑：通过执行池调用节点
+        execution_result = await self.execution_pool.execute_on_node(
+            node_id=node_id,
+            command=subtask.get("type", "execute"),
+            params={
+                "description": subtask.get("description"),
+                "capabilities": subtask.get("capabilities", []),
+                "data": subtask.get("data", {})
+            }
+        )
         
         # 更新节点负载
         current_load = self.topology.get_load(node_id)
         self.topology.update_load(node_id, min(current_load + 0.1, 1.0))
         
-        result = {
-            "node_id": node_id,
-            "subtask": subtask.get("description"),
-            "status": "success",
-            "data": {"result": "executed"},
-            "latency_ms": plan.estimated_latency_ms
-        }
+        # 构建结果
+        if execution_result.success:
+            result = {
+                "node_id": node_id,
+                "subtask": subtask.get("description"),
+                "status": "success",
+                "data": execution_result.data or {"result": "executed"},
+                "latency_ms": execution_result.latency_ms
+            }
+        else:
+            logger.warning(f"⚠️  Subtask execution failed on {node_id}: {execution_result.error}")
+            result = {
+                "node_id": node_id,
+                "subtask": subtask.get("description"),
+                "status": "failed",
+                "error": execution_result.error,
+                "latency_ms": execution_result.latency_ms
+            }
         
         return result
     
