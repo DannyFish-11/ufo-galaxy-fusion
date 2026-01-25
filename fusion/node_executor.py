@@ -262,7 +262,9 @@ class ExecutionPool:
         # 从拓扑配置创建执行器
         for node in topology_config.get("nodes", []):
             node_id = node["id"]
-            node_url = node.get("api_url", f"http://localhost:{8000 + int(node_id.split('_')[1])}")
+            # 使用 9000+ 端口范围与模拟服务器匹配
+            original_port = int(node.get("api_url", f"http://localhost:8000").split(":")[-1])
+            node_url = f"http://localhost:{9000 + (original_port - 8000)}"
             
             self.executors[node_id] = NodeExecutor(
                 node_id=node_id,
