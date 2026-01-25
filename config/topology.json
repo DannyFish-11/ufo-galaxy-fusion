@@ -1,0 +1,2590 @@
+{
+  "version": "1.0",
+  "topology_type": "three_layer_sphere",
+  "description": "UFO Galaxy - 102 Nodes Three-Layer Sphere Topology",
+  "generated_at": "2026-01-25",
+  "layers": [
+    {
+      "name": "core",
+      "index": 0,
+      "radius": 1.0,
+      "node_count": 16,
+      "description": "核心层 - 系统管理和协调"
+    },
+    {
+      "name": "cognitive",
+      "index": 1,
+      "radius": 2.0,
+      "node_count": 45,
+      "description": "认知层 - 智能处理和分析"
+    },
+    {
+      "name": "perception",
+      "index": 2,
+      "radius": 3.0,
+      "node_count": 41,
+      "description": "感知层 - 数据采集和感知"
+    }
+  ],
+  "domains": [
+    "search",
+    "nlu",
+    "storage",
+    "notification",
+    "sandbox",
+    "task_management",
+    "general",
+    "network",
+    "knowledge",
+    "vision",
+    "device_control",
+    "monitoring",
+    "state_management",
+    "security",
+    "media"
+  ],
+  "nodes": [
+    {
+      "id": "Node_00",
+      "name": "StateMachine",
+      "layer": "core",
+      "domain": "state_management",
+      "coordinates": {
+        "theta": 0.1401,
+        "phi": 0.0,
+        "radius": 1.0
+      },
+      "capabilities": [
+        "state_management",
+        "lock_management"
+      ],
+      "api_url": "http://localhost:8000",
+      "neighbors": [],
+      "metadata": {
+        "priority": "critical",
+        "max_load": 100
+      }
+    },
+    {
+      "id": "Node_01",
+      "name": "OneAPI",
+      "layer": "core",
+      "domain": "general",
+      "coordinates": {
+        "theta": 0.2431,
+        "phi": 2.4,
+        "radius": 1.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8001",
+      "neighbors": [
+        "Node_07",
+        "Node_11"
+      ],
+      "metadata": {
+        "priority": "critical",
+        "max_load": 100
+      }
+    },
+    {
+      "id": "Node_02",
+      "name": "Tasker",
+      "layer": "core",
+      "domain": "task_management",
+      "coordinates": {
+        "theta": 0.3144,
+        "phi": 4.7999,
+        "radius": 1.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8002",
+      "neighbors": [
+        "Node_04"
+      ],
+      "metadata": {
+        "priority": "critical",
+        "max_load": 100
+      }
+    },
+    {
+      "id": "Node_03",
+      "name": "SecretVault",
+      "layer": "core",
+      "domain": "security",
+      "coordinates": {
+        "theta": 0.3726,
+        "phi": 0.9167,
+        "radius": 1.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8003",
+      "neighbors": [
+        "Node_05"
+      ],
+      "metadata": {
+        "priority": "critical",
+        "max_load": 100
+      }
+    },
+    {
+      "id": "Node_04",
+      "name": "Router",
+      "layer": "core",
+      "domain": "task_management",
+      "coordinates": {
+        "theta": 0.4232,
+        "phi": 3.3167,
+        "radius": 1.0
+      },
+      "capabilities": [
+        "routing",
+        "orchestration"
+      ],
+      "api_url": "http://localhost:8004",
+      "neighbors": [
+        "Node_02"
+      ],
+      "metadata": {
+        "priority": "critical",
+        "max_load": 100
+      }
+    },
+    {
+      "id": "Node_05",
+      "name": "Auth",
+      "layer": "core",
+      "domain": "security",
+      "coordinates": {
+        "theta": 0.4687,
+        "phi": 5.7166,
+        "radius": 1.0
+      },
+      "capabilities": [
+        "authentication",
+        "security"
+      ],
+      "api_url": "http://localhost:8005",
+      "neighbors": [
+        "Node_03"
+      ],
+      "metadata": {
+        "priority": "critical",
+        "max_load": 100
+      }
+    },
+    {
+      "id": "Node_06",
+      "name": "Filesystem",
+      "layer": "core",
+      "domain": "storage",
+      "coordinates": {
+        "theta": 0.5104,
+        "phi": 1.8334,
+        "radius": 1.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8006",
+      "neighbors": [
+        "Node_12",
+        "Node_13"
+      ],
+      "metadata": {
+        "priority": "critical",
+        "max_load": 100
+      }
+    },
+    {
+      "id": "Node_07",
+      "name": "Git",
+      "layer": "core",
+      "domain": "general",
+      "coordinates": {
+        "theta": 0.5492,
+        "phi": 4.2334,
+        "radius": 1.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8007",
+      "neighbors": [
+        "Node_01",
+        "Node_11"
+      ],
+      "metadata": {
+        "priority": "critical",
+        "max_load": 100
+      }
+    },
+    {
+      "id": "Node_08",
+      "name": "Fetch",
+      "layer": "core",
+      "domain": "network",
+      "coordinates": {
+        "theta": 0.5857,
+        "phi": 0.3501,
+        "radius": 1.0
+      },
+      "capabilities": [
+        "network",
+        "http"
+      ],
+      "api_url": "http://localhost:8008",
+      "neighbors": [],
+      "metadata": {
+        "priority": "critical",
+        "max_load": 100
+      }
+    },
+    {
+      "id": "Node_09",
+      "name": "Sandbox",
+      "layer": "core",
+      "domain": "sandbox",
+      "coordinates": {
+        "theta": 0.6203,
+        "phi": 2.7501,
+        "radius": 1.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8009",
+      "neighbors": [],
+      "metadata": {
+        "priority": "critical",
+        "max_load": 100
+      }
+    },
+    {
+      "id": "Node_10",
+      "name": "Slack",
+      "layer": "core",
+      "domain": "notification",
+      "coordinates": {
+        "theta": 0.6532,
+        "phi": 5.1501,
+        "radius": 1.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8010",
+      "neighbors": [],
+      "metadata": {
+        "priority": "critical",
+        "max_load": 100
+      }
+    },
+    {
+      "id": "Node_11",
+      "name": "GitHub",
+      "layer": "core",
+      "domain": "general",
+      "coordinates": {
+        "theta": 0.6849,
+        "phi": 1.2669,
+        "radius": 1.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8011",
+      "neighbors": [
+        "Node_01",
+        "Node_07"
+      ],
+      "metadata": {
+        "priority": "critical",
+        "max_load": 100
+      }
+    },
+    {
+      "id": "Node_12",
+      "name": "Postgres",
+      "layer": "core",
+      "domain": "storage",
+      "coordinates": {
+        "theta": 0.7153,
+        "phi": 3.6668,
+        "radius": 1.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8012",
+      "neighbors": [
+        "Node_06",
+        "Node_13"
+      ],
+      "metadata": {
+        "priority": "critical",
+        "max_load": 100
+      }
+    },
+    {
+      "id": "Node_13",
+      "name": "SQLite",
+      "layer": "core",
+      "domain": "storage",
+      "coordinates": {
+        "theta": 0.7447,
+        "phi": 6.0668,
+        "radius": 1.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8013",
+      "neighbors": [
+        "Node_06",
+        "Node_12"
+      ],
+      "metadata": {
+        "priority": "critical",
+        "max_load": 100
+      }
+    },
+    {
+      "id": "Node_14",
+      "name": "FFmpeg",
+      "layer": "core",
+      "domain": "media",
+      "coordinates": {
+        "theta": 0.7732,
+        "phi": 2.1836,
+        "radius": 1.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8014",
+      "neighbors": [],
+      "metadata": {
+        "priority": "critical",
+        "max_load": 100
+      }
+    },
+    {
+      "id": "Node_15",
+      "name": "OCR",
+      "layer": "core",
+      "domain": "vision",
+      "coordinates": {
+        "theta": 0.8009,
+        "phi": 4.5835,
+        "radius": 1.0
+      },
+      "capabilities": [
+        "vision",
+        "image_processing"
+      ],
+      "api_url": "http://localhost:8015",
+      "neighbors": [],
+      "metadata": {
+        "priority": "critical",
+        "max_load": 100
+      }
+    },
+    {
+      "id": "Node_16",
+      "name": "Email",
+      "layer": "cognitive",
+      "domain": "notification",
+      "coordinates": {
+        "theta": 0.8278,
+        "phi": 0.7003,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8016",
+      "neighbors": [
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_17",
+      "name": "EdgeTTS",
+      "layer": "cognitive",
+      "domain": "nlu",
+      "coordinates": {
+        "theta": 0.8541,
+        "phi": 3.1003,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8017",
+      "neighbors": [
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_18",
+      "name": "DeepL",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 0.8799,
+        "phi": 5.5002,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8018",
+      "neighbors": [
+        "Node_21",
+        "Node_23",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_19",
+      "name": "Crypto",
+      "layer": "cognitive",
+      "domain": "security",
+      "coordinates": {
+        "theta": 0.905,
+        "phi": 1.617,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8019",
+      "neighbors": [
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_20",
+      "name": "Qdrant",
+      "layer": "cognitive",
+      "domain": "knowledge",
+      "coordinates": {
+        "theta": 0.9297,
+        "phi": 4.017,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8020",
+      "neighbors": [
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_21",
+      "name": "Notion",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 0.954,
+        "phi": 0.1337,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8021",
+      "neighbors": [
+        "Node_18",
+        "Node_23",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_22",
+      "name": "BraveSearch",
+      "layer": "cognitive",
+      "domain": "search",
+      "coordinates": {
+        "theta": 0.9778,
+        "phi": 2.5337,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "search",
+        "information_retrieval"
+      ],
+      "api_url": "http://localhost:8022",
+      "neighbors": [
+        "Node_25",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_23",
+      "name": "Calendar",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.0013,
+        "phi": 4.9337,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8023",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_24",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_23",
+      "name": "Time",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.0244,
+        "phi": 1.0504,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8023",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_24",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_24",
+      "name": "Weather",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.0472,
+        "phi": 3.4504,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8024",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_25",
+      "name": "GoogleSearch",
+      "layer": "cognitive",
+      "domain": "search",
+      "coordinates": {
+        "theta": 1.0697,
+        "phi": 5.8504,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "search",
+        "information_retrieval"
+      ],
+      "api_url": "http://localhost:8025",
+      "neighbors": [
+        "Node_22",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_28",
+      "name": "Reserved",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.0919,
+        "phi": 1.9672,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8028",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_29",
+      "name": "Reserved",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.1139,
+        "phi": 4.3671,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8029",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_30",
+      "name": "Reserved",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.1356,
+        "phi": 0.4839,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8030",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_31",
+      "name": "Reserved",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.1571,
+        "phi": 2.8839,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8031",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_32",
+      "name": "Reserved",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.1785,
+        "phi": 5.2838,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8032",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_33",
+      "name": "ADB",
+      "layer": "cognitive",
+      "domain": "device_control",
+      "coordinates": {
+        "theta": 1.1996,
+        "phi": 1.4006,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8033",
+      "neighbors": [
+        "Node_34",
+        "Node_35",
+        "Node_36",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_34",
+      "name": "Scrcpy",
+      "layer": "cognitive",
+      "domain": "device_control",
+      "coordinates": {
+        "theta": 1.2205,
+        "phi": 3.8006,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8034",
+      "neighbors": [
+        "Node_33",
+        "Node_35",
+        "Node_36",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_35",
+      "name": "AppleScript",
+      "layer": "cognitive",
+      "domain": "device_control",
+      "coordinates": {
+        "theta": 1.2413,
+        "phi": 6.2005,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8035",
+      "neighbors": [
+        "Node_33",
+        "Node_34",
+        "Node_36",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_36",
+      "name": "UIAWindows",
+      "layer": "cognitive",
+      "domain": "device_control",
+      "coordinates": {
+        "theta": 1.262,
+        "phi": 2.3173,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8036",
+      "neighbors": [
+        "Node_33",
+        "Node_34",
+        "Node_35",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_37",
+      "name": "LinuxDBus",
+      "layer": "cognitive",
+      "domain": "device_control",
+      "coordinates": {
+        "theta": 1.2825,
+        "phi": 4.7173,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8037",
+      "neighbors": [
+        "Node_33",
+        "Node_34",
+        "Node_35",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_38",
+      "name": "BLE",
+      "layer": "cognitive",
+      "domain": "device_control",
+      "coordinates": {
+        "theta": 1.3029,
+        "phi": 0.834,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8038",
+      "neighbors": [
+        "Node_33",
+        "Node_34",
+        "Node_35",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_39",
+      "name": "SSH",
+      "layer": "cognitive",
+      "domain": "network",
+      "coordinates": {
+        "theta": 1.3232,
+        "phi": 3.234,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8039",
+      "neighbors": [
+        "Node_40",
+        "Node_41",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_40",
+      "name": "SFTP",
+      "layer": "cognitive",
+      "domain": "network",
+      "coordinates": {
+        "theta": 1.3434,
+        "phi": 5.634,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8040",
+      "neighbors": [
+        "Node_39",
+        "Node_41",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_41",
+      "name": "MQTT",
+      "layer": "cognitive",
+      "domain": "network",
+      "coordinates": {
+        "theta": 1.3634,
+        "phi": 1.7507,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8041",
+      "neighbors": [
+        "Node_39",
+        "Node_40",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_42",
+      "name": "CANbus",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.3834,
+        "phi": 4.1507,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8042",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_43",
+      "name": "MAVLink",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.4033,
+        "phi": 0.2675,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8043",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_44",
+      "name": "NFC",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.4232,
+        "phi": 2.6675,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8044",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_45",
+      "name": "DesktopAuto",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.443,
+        "phi": 5.0674,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8045",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_46",
+      "name": "Camera",
+      "layer": "cognitive",
+      "domain": "vision",
+      "coordinates": {
+        "theta": 1.4627,
+        "phi": 1.1842,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "vision",
+        "image_processing"
+      ],
+      "api_url": "http://localhost:8046",
+      "neighbors": [
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_47",
+      "name": "Audio",
+      "layer": "cognitive",
+      "domain": "media",
+      "coordinates": {
+        "theta": 1.4824,
+        "phi": 3.5842,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "media_processing"
+      ],
+      "api_url": "http://localhost:8047",
+      "neighbors": [
+        "Node_48",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_48",
+      "name": "MediaGen",
+      "layer": "cognitive",
+      "domain": "media",
+      "coordinates": {
+        "theta": 1.5021,
+        "phi": 5.9841,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "media_processing"
+      ],
+      "api_url": "http://localhost:8048",
+      "neighbors": [
+        "Node_47",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_48",
+      "name": "Serial",
+      "layer": "cognitive",
+      "domain": "device_control",
+      "coordinates": {
+        "theta": 1.5218,
+        "phi": 2.1009,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8048",
+      "neighbors": [
+        "Node_33",
+        "Node_34",
+        "Node_35",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_49",
+      "name": "OctoPrint",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.5414,
+        "phi": 4.5009,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8049",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_50",
+      "name": "Transformer",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.561,
+        "phi": 0.6176,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8050",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_51",
+      "name": "QuantumDispatcher",
+      "layer": "cognitive",
+      "domain": "task_management",
+      "coordinates": {
+        "theta": 1.5806,
+        "phi": 3.0176,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8051",
+      "neighbors": [
+        "Node_58",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_52",
+      "name": "QiskitSimulator",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.6002,
+        "phi": 5.4176,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8052",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_53",
+      "name": "GraphLogic",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.6198,
+        "phi": 1.5343,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8053",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_54",
+      "name": "SymbolicMath",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.6395,
+        "phi": 3.9343,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8054",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_56",
+      "name": "AgentSwarm",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.6591,
+        "phi": 0.0511,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8056",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_56",
+      "name": "Planning",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.6788,
+        "phi": 2.451,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8056",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_57",
+      "name": "QuantumCloud",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.6986,
+        "phi": 4.851,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8057",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_58",
+      "name": "ModelRouter",
+      "layer": "cognitive",
+      "domain": "task_management",
+      "coordinates": {
+        "theta": 1.7184,
+        "phi": 0.9678,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "routing",
+        "orchestration"
+      ],
+      "api_url": "http://localhost:8058",
+      "neighbors": [
+        "Node_51",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_59",
+      "name": "CausalInference",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.7382,
+        "phi": 3.3678,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8059",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_61",
+      "name": "GeometricReasoning",
+      "layer": "cognitive",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.7582,
+        "phi": 5.7677,
+        "radius": 2.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8061",
+      "neighbors": [
+        "Node_18",
+        "Node_21",
+        "Node_23",
+        "Node_00",
+        "Node_01"
+      ],
+      "metadata": {
+        "priority": "high",
+        "max_load": 200
+      }
+    },
+    {
+      "id": "Node_62",
+      "name": "ProbabilisticProgramming",
+      "layer": "perception",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.7782,
+        "phi": 1.8845,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8062",
+      "neighbors": [
+        "Node_70",
+        "Node_74",
+        "Node_83",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_64",
+      "name": "Telemetry",
+      "layer": "perception",
+      "domain": "monitoring",
+      "coordinates": {
+        "theta": 1.7982,
+        "phi": 4.2845,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8064",
+      "neighbors": [
+        "Node_65",
+        "Node_67",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_65",
+      "name": "LoggerCentral",
+      "layer": "perception",
+      "domain": "monitoring",
+      "coordinates": {
+        "theta": 1.8184,
+        "phi": 0.4012,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8065",
+      "neighbors": [
+        "Node_64",
+        "Node_67",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_66",
+      "name": "ConfigManager",
+      "layer": "perception",
+      "domain": "state_management",
+      "coordinates": {
+        "theta": 1.8387,
+        "phi": 2.8012,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8066",
+      "neighbors": [
+        "Node_111",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_67",
+      "name": "HealthMonitor",
+      "layer": "perception",
+      "domain": "monitoring",
+      "coordinates": {
+        "theta": 1.8591,
+        "phi": 5.2012,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8067",
+      "neighbors": [
+        "Node_64",
+        "Node_65",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_68",
+      "name": "Security",
+      "layer": "perception",
+      "domain": "security",
+      "coordinates": {
+        "theta": 1.8796,
+        "phi": 1.3179,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "authentication",
+        "security"
+      ],
+      "api_url": "http://localhost:8068",
+      "neighbors": [
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_69",
+      "name": "BackupRestore",
+      "layer": "perception",
+      "domain": "storage",
+      "coordinates": {
+        "theta": 1.9003,
+        "phi": 3.7179,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8069",
+      "neighbors": [
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_70",
+      "name": "BambuLab",
+      "layer": "perception",
+      "domain": "general",
+      "coordinates": {
+        "theta": 1.9211,
+        "phi": 6.1179,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8070",
+      "neighbors": [
+        "Node_62",
+        "Node_74",
+        "Node_83",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_71",
+      "name": "MediaGen",
+      "layer": "perception",
+      "domain": "media",
+      "coordinates": {
+        "theta": 1.942,
+        "phi": 2.2346,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "media_processing"
+      ],
+      "api_url": "http://localhost:8071",
+      "neighbors": [
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_72",
+      "name": "KnowledgeBase",
+      "layer": "perception",
+      "domain": "knowledge",
+      "coordinates": {
+        "theta": 1.9631,
+        "phi": 4.6346,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "knowledge_management",
+        "memory"
+      ],
+      "api_url": "http://localhost:8072",
+      "neighbors": [
+        "Node_73",
+        "Node_80",
+        "Node_100",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_73",
+      "name": "Learning",
+      "layer": "perception",
+      "domain": "knowledge",
+      "coordinates": {
+        "theta": 1.9845,
+        "phi": 0.7514,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8073",
+      "neighbors": [
+        "Node_72",
+        "Node_80",
+        "Node_100",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_74",
+      "name": "DigitalTwin",
+      "layer": "perception",
+      "domain": "general",
+      "coordinates": {
+        "theta": 2.006,
+        "phi": 3.1513,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8074",
+      "neighbors": [
+        "Node_62",
+        "Node_70",
+        "Node_83",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_79",
+      "name": "LocalLLM",
+      "layer": "perception",
+      "domain": "nlu",
+      "coordinates": {
+        "theta": 2.0277,
+        "phi": 5.5513,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "nlu",
+        "text_processing"
+      ],
+      "api_url": "http://localhost:8079",
+      "neighbors": [
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_80",
+      "name": "MemorySystem",
+      "layer": "perception",
+      "domain": "knowledge",
+      "coordinates": {
+        "theta": 2.0497,
+        "phi": 1.6681,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "knowledge_management",
+        "memory"
+      ],
+      "api_url": "http://localhost:8080",
+      "neighbors": [
+        "Node_72",
+        "Node_73",
+        "Node_100",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_81",
+      "name": "Orchestrator",
+      "layer": "perception",
+      "domain": "task_management",
+      "coordinates": {
+        "theta": 2.0719,
+        "phi": 4.0681,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "routing",
+        "orchestration"
+      ],
+      "api_url": "http://localhost:8081",
+      "neighbors": [
+        "Node_96",
+        "Node_110",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_82",
+      "name": "NetworkGuard",
+      "layer": "perception",
+      "domain": "network",
+      "coordinates": {
+        "theta": 2.0944,
+        "phi": 0.1848,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "network",
+        "http"
+      ],
+      "api_url": "http://localhost:8082",
+      "neighbors": [
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_83",
+      "name": "NewsAggregator",
+      "layer": "perception",
+      "domain": "general",
+      "coordinates": {
+        "theta": 2.1172,
+        "phi": 2.5848,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8083",
+      "neighbors": [
+        "Node_62",
+        "Node_70",
+        "Node_74",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_84",
+      "name": "StockTracker",
+      "layer": "perception",
+      "domain": "general",
+      "coordinates": {
+        "theta": 2.1403,
+        "phi": 4.9848,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8084",
+      "neighbors": [
+        "Node_62",
+        "Node_70",
+        "Node_74",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_85",
+      "name": "PromptLibrary",
+      "layer": "perception",
+      "domain": "general",
+      "coordinates": {
+        "theta": 2.1638,
+        "phi": 1.1015,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8085",
+      "neighbors": [
+        "Node_62",
+        "Node_70",
+        "Node_74",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_90",
+      "name": "MultimodalVision",
+      "layer": "perception",
+      "domain": "vision",
+      "coordinates": {
+        "theta": 2.1876,
+        "phi": 3.5015,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "vision",
+        "image_processing"
+      ],
+      "api_url": "http://localhost:8090",
+      "neighbors": [
+        "Node_113",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_91",
+      "name": "MultimodalAgent",
+      "layer": "perception",
+      "domain": "general",
+      "coordinates": {
+        "theta": 2.2118,
+        "phi": 5.9015,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8091",
+      "neighbors": [
+        "Node_62",
+        "Node_70",
+        "Node_74",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_92",
+      "name": "AutoControl",
+      "layer": "perception",
+      "domain": "general",
+      "coordinates": {
+        "theta": 2.2365,
+        "phi": 2.0182,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8092",
+      "neighbors": [
+        "Node_62",
+        "Node_70",
+        "Node_74",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_95",
+      "name": "WebRTC_Receiver",
+      "layer": "perception",
+      "domain": "general",
+      "coordinates": {
+        "theta": 2.2617,
+        "phi": 4.4182,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8095",
+      "neighbors": [
+        "Node_62",
+        "Node_70",
+        "Node_74",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_96",
+      "name": "SmartTransportRouter",
+      "layer": "perception",
+      "domain": "task_management",
+      "coordinates": {
+        "theta": 2.2874,
+        "phi": 0.535,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "routing",
+        "orchestration"
+      ],
+      "api_url": "http://localhost:8096",
+      "neighbors": [
+        "Node_81",
+        "Node_110",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_97",
+      "name": "AcademicSearch",
+      "layer": "perception",
+      "domain": "search",
+      "coordinates": {
+        "theta": 2.3138,
+        "phi": 2.9349,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "search",
+        "information_retrieval"
+      ],
+      "api_url": "http://localhost:8097",
+      "neighbors": [
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_100",
+      "name": "MemorySystem",
+      "layer": "perception",
+      "domain": "knowledge",
+      "coordinates": {
+        "theta": 2.3407,
+        "phi": 5.3349,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "knowledge_management",
+        "memory"
+      ],
+      "api_url": "http://localhost:8100",
+      "neighbors": [
+        "Node_72",
+        "Node_73",
+        "Node_80",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_101",
+      "name": "CodeEngine",
+      "layer": "perception",
+      "domain": "general",
+      "coordinates": {
+        "theta": 2.3684,
+        "phi": 1.4517,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8101",
+      "neighbors": [
+        "Node_62",
+        "Node_70",
+        "Node_74",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_102",
+      "name": "DebugOptimize",
+      "layer": "perception",
+      "domain": "general",
+      "coordinates": {
+        "theta": 2.3969,
+        "phi": 3.8516,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8102",
+      "neighbors": [
+        "Node_62",
+        "Node_70",
+        "Node_74",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_103",
+      "name": "KnowledgeGraph",
+      "layer": "perception",
+      "domain": "knowledge",
+      "coordinates": {
+        "theta": 2.4263,
+        "phi": 6.2516,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "knowledge_management",
+        "memory"
+      ],
+      "api_url": "http://localhost:8103",
+      "neighbors": [
+        "Node_72",
+        "Node_73",
+        "Node_80",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_104",
+      "name": "AgentCPM",
+      "layer": "perception",
+      "domain": "general",
+      "coordinates": {
+        "theta": 2.4567,
+        "phi": 2.3684,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8104",
+      "neighbors": [
+        "Node_62",
+        "Node_70",
+        "Node_74",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_105",
+      "name": "UnifiedKnowledgeBase",
+      "layer": "perception",
+      "domain": "knowledge",
+      "coordinates": {
+        "theta": 2.4884,
+        "phi": 4.7684,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "knowledge_management",
+        "memory"
+      ],
+      "api_url": "http://localhost:8105",
+      "neighbors": [
+        "Node_72",
+        "Node_73",
+        "Node_80",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_106",
+      "name": "GitHubFlow",
+      "layer": "perception",
+      "domain": "general",
+      "coordinates": {
+        "theta": 2.5213,
+        "phi": 0.8851,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8106",
+      "neighbors": [
+        "Node_62",
+        "Node_70",
+        "Node_74",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_108",
+      "name": "MetaCognition",
+      "layer": "perception",
+      "domain": "general",
+      "coordinates": {
+        "theta": 2.5559,
+        "phi": 3.2851,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8108",
+      "neighbors": [
+        "Node_62",
+        "Node_70",
+        "Node_74",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_109",
+      "name": "ProactiveSensing",
+      "layer": "perception",
+      "domain": "general",
+      "coordinates": {
+        "theta": 2.5924,
+        "phi": 5.6851,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8109",
+      "neighbors": [
+        "Node_62",
+        "Node_70",
+        "Node_74",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_110",
+      "name": "SmartOrchestrator",
+      "layer": "perception",
+      "domain": "task_management",
+      "coordinates": {
+        "theta": 2.6312,
+        "phi": 1.8018,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "routing",
+        "orchestration"
+      ],
+      "api_url": "http://localhost:8110",
+      "neighbors": [
+        "Node_81",
+        "Node_96",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_111",
+      "name": "ContextManager",
+      "layer": "perception",
+      "domain": "state_management",
+      "coordinates": {
+        "theta": 2.6729,
+        "phi": 4.2018,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8111",
+      "neighbors": [
+        "Node_66",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_112",
+      "name": "SelfHealing",
+      "layer": "perception",
+      "domain": "general",
+      "coordinates": {
+        "theta": 2.7184,
+        "phi": 0.3186,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8112",
+      "neighbors": [
+        "Node_62",
+        "Node_70",
+        "Node_74",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_113",
+      "name": "AndroidVLM",
+      "layer": "perception",
+      "domain": "vision",
+      "coordinates": {
+        "theta": 2.769,
+        "phi": 2.7185,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8113",
+      "neighbors": [
+        "Node_90",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_116",
+      "name": "ExternalToolWrapper",
+      "layer": "perception",
+      "domain": "general",
+      "coordinates": {
+        "theta": 2.8272,
+        "phi": 5.1185,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8116",
+      "neighbors": [
+        "Node_62",
+        "Node_70",
+        "Node_74",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_117",
+      "name": "OpenCode",
+      "layer": "perception",
+      "domain": "general",
+      "coordinates": {
+        "theta": 2.8985,
+        "phi": 1.2353,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8117",
+      "neighbors": [
+        "Node_62",
+        "Node_70",
+        "Node_74",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    },
+    {
+      "id": "Node_118",
+      "name": "NodeFactory",
+      "layer": "perception",
+      "domain": "general",
+      "coordinates": {
+        "theta": 3.0014,
+        "phi": 3.6352,
+        "radius": 3.0
+      },
+      "capabilities": [
+        "general"
+      ],
+      "api_url": "http://localhost:8118",
+      "neighbors": [
+        "Node_62",
+        "Node_70",
+        "Node_74",
+        "Node_16",
+        "Node_17"
+      ],
+      "metadata": {
+        "priority": "normal",
+        "max_load": 300
+      }
+    }
+  ]
+}
