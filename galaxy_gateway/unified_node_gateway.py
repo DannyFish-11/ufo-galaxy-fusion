@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 """
-UFO Galaxy Fusion - Unified Node Gateway
+UFO Galaxy Fusion - Unified Node Gateway (Standardized)
 
-统一节点网关
+统一节点网关（标准化版）
 
 核心职责:
-1. 动态加载 102 个节点的业务逻辑 (nodes/ 目录)
+1. 动态加载 102 个节点的标准化入口 (fusion_entry.py)
 2. 提供统一的 HTTP API 路由 (/api/nodes/{node_id}/execute)
 3. 隔离节点执行环境，提供统一的错误处理
-4. 消除管理 102 个独立进程的复杂度
 
 作者: Manus AI
 日期: 2026-01-26
-版本: 1.0.0
+版本: 1.1.0 (标准化版)
 """
 
 import os
@@ -38,25 +37,34 @@ class ExecuteRequest(BaseModel):
     params: Dict[str, Any] = {}
 
 def load_nodes():
-    """动态扫描并加载 nodes/ 目录下的所有节点"""
+    """动态扫描并加载 nodes/ 目录下的所有标准化节点"""
     nodes_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "nodes")
     if not os.path.exists(nodes_dir):
         logger.error(f"❌ Nodes directory not found: {nodes_dir}")
         return
 
-    sys.path.append(nodes_dir)
+    if nodes_dir not in sys.path:
+        sys.path.append(nodes_dir)
     
     # 扫描 Node_XX 格式的目录
     for item in os.listdir(nodes_dir):
         if item.startswith("Node_") and os.path.isdir(os.path.join(nodes_dir, item)):
-            node_id = item.split('_')[0] + "_" + item.split('_')[1] # 提取 Node_XX
+            node_id = "_".join(item.split('_')[:2])
             try:
-                # 尝试导入 main.py
+                # 优先加载标准化入口 fusion_entry.py
+                module_path = f"{item}.fusion_entry"
+                try:
+                    module = importlib.import_module(module_path)
+                    if hasattr(module, "get_node_instance"):
+                        node_instances[node_id] = module.get_node_instance()
+                        logger.info(f"✅ Loaded standardized node: {node_id}")
+                        continue
+                except ImportError:
+                    logger.debug(f"ℹ️  No fusion_entry found for {node_id}, trying legacy load...")
+
+                # 备选：尝试直接加载 main.py (旧逻辑)
                 module_path = f"{item}.main"
-                module = importlib.import_lib(module_path)
-                
-                # 寻找节点类或初始化函数
-                # 假设每个 main.py 都有一个与目录名相关的类，或者一个统一的 get_instance()
+                module = importlib.import_module(module_path)
                 instance = None
                 if hasattr(module, "get_instance"):
                     instance = module.get_instance()
@@ -65,9 +73,9 @@ def load_nodes():
                 
                 if instance:
                     node_instances[node_id] = instance
-                    logger.info(f"✅ Loaded node: {node_id} from {item}")
+                    logger.info(f"✅ Loaded legacy node: {node_id}")
                 else:
-                    logger.warning(f"⚠️  Node {node_id} loaded but no instance found (missing get_instance or Node class)")
+                    logger.warning(f"⚠️  Node {node_id} has no valid entry point")
             except Exception as e:
                 logger.error(f"❌ Failed to load node {node_id}: {e}")
 
@@ -75,17 +83,11 @@ def load_nodes():
 async def startup_event():
     logger.info("🚀 Starting Unified Node Gateway...")
     load_nodes()
-    logger.info(f"✨ Total nodes loaded: {len(node_instances)}")
+    logger.info(f"✨ Total nodes online: {len(node_instances)}")
 
 @app.get("/health")
 async def global_health():
-    return {"status": "healthy", "loaded_nodes": len(node_instances)}
-
-@app.get("/api/nodes/{node_id}/health")
-async def node_health(node_id: str):
-    if node_id not in node_instances:
-        raise HTTPException(status_code=404, detail=f"Node {node_id} not found")
-    return {"status": "healthy", "node_id": node_id}
+    return {"status": "healthy", "online_nodes": len(node_instances)}
 
 @app.post("/api/nodes/{node_id}/execute")
 async def execute_on_node(node_id: str, request: ExecuteRequest):
@@ -95,22 +97,22 @@ async def execute_on_node(node_id: str, request: ExecuteRequest):
     instance = node_instances[node_id]
     
     try:
-        # 统一调用接口：假设所有节点都有 process 或 execute 方法
-        method = None
-        for m in ["process", "execute", "run"]:
-            if hasattr(instance, m):
-                method = getattr(instance, m)
-                break
-        
-        if not method:
+        # 统一调用接口
+        if hasattr(instance, "execute"):
+            method = instance.execute
+        elif hasattr(instance, "process"):
+            method = instance.process
+        else:
             raise HTTPException(status_code=500, detail=f"Node {node_id} has no executable method")
             
-        # 执行逻辑
         if asyncio.iscoroutinefunction(method):
             result = await method(request.command, **request.params)
         else:
             result = method(request.command, **request.params)
             
+        # 如果返回的是字典且包含 success 键，则直接返回
+        if isinstance(result, dict) and "success" in result:
+            return result
         return {"success": True, "node_id": node_id, "data": result}
         
     except Exception as e:
@@ -119,5 +121,5 @@ async def execute_on_node(node_id: str, request: ExecuteRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    # 统一运行在 8000 端口
     uvicorn.run(app, host="0.0.0.0", port=8000)
+"""
