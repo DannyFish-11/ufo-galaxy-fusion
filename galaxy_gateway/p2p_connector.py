@@ -262,8 +262,8 @@ class P2PConnector:
                     conn.writer = writer
                     connected = True
                     print(f"通过局域网连接到 {peer.device_id}")
-                except:
-                    pass
+                except Exception as e:
+                    print(f"局域网连接失败 ({peer.device_id}): {e}")
             
             # 尝试 2: 公网直连
             if not connected and peer.public_ip:
@@ -276,8 +276,8 @@ class P2PConnector:
                     conn.writer = writer
                     connected = True
                     print(f"通过公网连接到 {peer.device_id}")
-                except:
-                    pass
+                except Exception as e:
+                    print(f"公网连接失败 ({peer.device_id}): {e}")
             
             if connected:
                 conn.state = ConnectionState.CONNECTED
@@ -444,9 +444,18 @@ class P2PConnector:
     
     async def _handle_data(self, conn: P2PConnection, data: bytes):
         """处理接收到的数据"""
-        # 这里可以添加数据处理逻辑
-        # 例如：解析消息、触发回调等
-        print(f"收到来自 {conn.peer.device_id} 的数据: {len(data)} 字节")
+        try:
+            message = json.loads(data.decode('utf-8'))
+            msg_type = message.get("type")
+            
+            if msg_type == "heartbeat":
+                # 心跳消息已在接收循环中更新时间，此处无需额外处理
+                return
+                
+            logger.info(f"📩 Received P2P message from {conn.peer.device_id}: {msg_type}")
+            # 触发业务逻辑回调（此处可扩展）
+        except Exception as e:
+            logger.error(f"❌ Error handling P2P data: {e}")
     
     async def _heartbeat_loop(self):
         """心跳循环"""
