@@ -62,7 +62,8 @@ class TaskScheduler:
     """任务调度器 - 管理任务执行顺序和依赖"""
     
     def __init__(self):
-        pass
+        """初始化组件"""
+        self.initialized_at = datetime.now()
     
     def create_execution_plan(self, tasks: List[Any]) -> ExecutionPlan:
         """
@@ -304,7 +305,8 @@ class ResultAggregator:
     """结果聚合器 - 收集和聚合任务执行结果"""
     
     def __init__(self):
-        pass
+        """初始化组件"""
+        self.initialized_at = datetime.now()
     
     def aggregate(self, results: List[TaskResult]) -> Dict[str, Any]:
         """
